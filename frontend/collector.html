@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Medhā | Speech Data Collection Portal</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts for Devanagari -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Tiro+Devanagari+Sanskrit:ital@0;1&family=Yatra+One&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            devanagari: ['"Tiro Devanagari Sanskrit"', 'serif'],
+            title: ['"Yatra One"', 'cursive']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @keyframes pulseRecord {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
+      50% { transform: scale(1.03); box-shadow: 0 0 30px rgba(239, 68, 68, 0.8); }
+    }
+    .recording-active {
+      animation: pulseRecord 1.5s infinite;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans flex flex-col selection:bg-orange-500 selection:text-white">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <a href="index.html" class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-orange-500 flex items-center justify-center text-white font-title text-2xl font-bold shadow-lg shadow-orange-500/20">
+          मे
+        </a>
+        <div>
+          <h1 class="text-base font-bold text-white flex items-center space-x-2">
+            <span>Project Medhā</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Data Collector</span>
+          </h1>
+          <p class="text-xs text-slate-400">Sanskrit & Prakrit Recitation Contributor Portal</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-3 text-xs">
+        <a href="index.html" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+          ← Back to Verifier
+        </a>
+        <button onclick="toggleAdminModal()" class="px-3 py-1.5 rounded-lg bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500/30 transition">
+          ⚙️ Manage Prompts
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="flex-1 max-w-3xl w-full mx-auto px-4 py-6 space-y-6">
+
+    <!-- Contributor Info & Overall Progress -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <span class="text-2xl">👤</span>
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Speaker / Contributor Name:</label>
+          <input type="text" id="speaker-name-input" placeholder="e.g. Pakshal" onchange="saveSpeakerName()" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-sm text-white focus:ring-2 focus:ring-orange-500 focus:outline-none w-48 font-medium">
+        </div>
+      </div>
+
+      <!-- Progress Pill -->
+      <div class="text-right">
+        <div class="text-xs text-slate-400">Prompt Progress</div>
+        <div class="text-lg font-bold text-orange-400">
+          <span id="prompt-current-num">1</span> <span class="text-slate-500 text-sm">/</span> <span id="prompt-total-num">5</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Recording Card -->
+    <div class="bg-gradient-to-b from-slate-900 to-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 text-center relative overflow-hidden">
+      
+      <!-- Top Badges -->
+      <div class="flex items-center justify-between text-xs text-slate-400 pb-2 border-b border-slate-800">
+        <span class="px-2.5 py-1 rounded-full bg-slate-800 font-mono text-slate-300 font-semibold" id="card-prompt-id">Prompt #1</span>
+        <span class="text-slate-400">Recommended Duration: <strong class="text-amber-400">2 to 10 seconds</strong></span>
+      </div>
+
+      <!-- Sanskrit Verse Prompt -->
+      <div class="py-4 space-y-2">
+        <div class="text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Please recite this verse excerpt clearly:</div>
+        <div id="prompt-text-display" class="text-3xl sm:text-4xl font-devanagari text-amber-100 leading-relaxed font-medium tracking-wide py-2 min-h-[90px] flex items-center justify-center">
+          णमो अरिहंताणं
+        </div>
+      </div>
+
+      <!-- Audio Visualizer & Timer -->
+      <div class="flex flex-col items-center justify-center space-y-2">
+        <canvas id="mic-canvas" width="280" height="40" class="bg-slate-950 rounded-xl border border-slate-800"></canvas>
+        <div id="recording-timer" class="text-sm font-mono font-bold text-slate-400">00:00</div>
+      </div>
+
+      <!-- Record Controls -->
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+        <!-- Start / Stop Record Button -->
+        <button id="btn-record" onclick="toggleRecord()" class="w-full sm:w-auto px-8 py-3.5 rounded-2xl font-bold text-base bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 text-white shadow-xl shadow-red-500/20 transition flex items-center justify-center space-x-2">
+          <span id="record-btn-icon">🔴</span>
+          <span id="record-btn-text">Start Recording</span>
+        </button>
+
+        <!-- Submit & Next Button (Enabled when audio recorded) -->
+        <button id="btn-submit" onclick="submitRecording()" disabled class="w-full sm:w-auto px-8 py-3.5 rounded-2xl font-bold text-base bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white shadow-xl shadow-emerald-500/20 transition flex items-center justify-center space-x-2">
+          <span>✅ Save & Next Prompt</span>
+        </button>
+      </div>
+
+      <!-- Audio Playback Preview (Hidden until recorded) -->
+      <div id="playback-container" class="hidden pt-3 border-t border-slate-800 space-y-2">
+        <div class="text-xs text-slate-400 flex items-center justify-center space-x-2">
+          <span>Preview your recording:</span>
+          <span id="playback-duration" class="font-mono text-emerald-400 font-bold"></span>
+        </div>
+        <audio id="audio-preview" controls class="w-full max-w-md mx-auto"></audio>
+      </div>
+
+      <!-- Navigation Arrows -->
+      <div class="pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+        <button onclick="prevPrompt()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+          ← Previous
+        </button>
+        <span class="text-slate-500 text-[11px]">Use microphone or tap upload if browser restricts mic</span>
+        <button onclick="nextPrompt()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+          Skip / Next →
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Alternative: Voice Memo File Upload (Foolproof for mobile browsers over HTTP) -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
+      <details class="text-xs text-slate-400 cursor-pointer">
+        <summary class="font-semibold text-slate-300 hover:text-white transition flex items-center space-x-1.5">
+          <span>📁 Alternatively, upload pre-recorded audio file for this prompt</span>
+        </summary>
+        <div class="pt-3 space-y-3">
+          <p class="text-slate-400">If your mobile phone blocks browser microphone access over local HTTP, you can record this verse using your phone's built-in Voice Recorder / Voice Memos app and upload the file (.wav, .m4a, .mp3) here:</p>
+          <div class="flex items-center space-x-3">
+            <input type="file" id="file-upload-input" accept="audio/*" class="text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-orange-500 file:text-white hover:file:bg-orange-600 bg-slate-950 p-1.5 rounded-lg border border-slate-800 flex-1">
+            <button onclick="uploadSelectedFile()" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow transition">
+              Upload File
+            </button>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <!-- Live Dataset Stats Box -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
+      <div class="flex items-center justify-between text-xs">
+        <span class="font-bold text-white uppercase tracking-wider">📊 Collected Dataset Statistics</span>
+        <button onclick="fetchStats()" class="text-orange-400 hover:underline">Refresh</button>
+      </div>
+      <div class="grid grid-cols-3 gap-3 text-center">
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+          <div id="stat-total-clips" class="text-xl font-bold text-white">0</div>
+          <div class="text-[10px] text-slate-400 uppercase">Clips Saved</div>
+        </div>
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+          <div id="stat-total-mins" class="text-xl font-bold text-emerald-400">0.0</div>
+          <div class="text-[10px] text-slate-400 uppercase">Total Minutes</div>
+        </div>
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+          <div id="stat-speakers-count" class="text-xl font-bold text-amber-400">0</div>
+          <div class="text-[10px] text-slate-400 uppercase">Contributors</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Admin Modal: Update Prompts List -->
+  <div id="admin-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+        <h3 class="text-base font-bold text-white">⚙️ Configure Prompts to Record</h3>
+        <button onclick="toggleAdminModal()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+      </div>
+      <p class="text-xs text-slate-400">Paste your Sanskrit/Prakrit sutra verses below (one line per prompt). Each line will be shown to speakers as a separate 2-10s recording card:</p>
+      
+      <textarea id="admin-prompts-input" rows="8" placeholder="णमो अरिहंताणं
+णमो सिद्धाणं
+णमो आयरियाणं
+णमो उवज्झायाणं
+णमो लोए सव्वसाहूणं" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-base font-devanagari text-amber-100 focus:ring-2 focus:ring-orange-500 focus:outline-none leading-relaxed"></textarea>
+
+      <div class="flex items-center justify-end space-x-3 pt-2">
+        <button onclick="toggleAdminModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-semibold transition">Cancel</button>
+        <button onclick="saveAdminPrompts()" class="px-5 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-xs text-white font-bold shadow transition">Save Prompts</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800 bg-slate-950/80 py-4 text-center text-xs text-slate-500">
+    Project Medhā Speech Collector &bull; Audio saved directly to <code>data/raw/</code> for fine-tuning
+  </footer>
+
+  <script>
+    const HOSTNAME = window.location.hostname || 'localhost';
+    const API_URL = `http://${HOSTNAME}:8000`;
+
+    let prompts = [];
+    let currentPromptIdx = 0;
+    let isRecording = false;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let recordedBlob = null;
+    let timerInterval = null;
+    let recordingStartTime = 0;
+
+    // Load initial data
+    window.addEventListener('DOMContentLoaded', async () => {
+      loadSavedSpeakerName();
+      await fetchPrompts();
+      await fetchStats();
+    });
+
+    function loadSavedSpeakerName() {
+      const saved = localStorage.getItem('medha_speaker_name');
+      if (saved) {
+        document.getElementById('speaker-name-input').value = saved;
+      }
+    }
+
+    function saveSpeakerName() {
+      const name = document.getElementById('speaker-name-input').value.trim();
+      if (name) localStorage.setItem('medha_speaker_name', name);
+    }
+
+    function getSpeakerName() {
+      const name = document.getElementById('speaker-name-input').value.trim();
+      return name || 'Anonymous';
+    }
+
+    async function fetchPrompts() {
+      try {
+        const res = await fetch(`${API_URL}/api/v1/collector/prompts`);
+        if (res.ok) {
+          const data = await res.json();
+          prompts = data.prompts || [];
+          if (prompts.length > 0) {
+            currentPromptIdx = 0;
+            displayCurrentPrompt();
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load prompts:", e);
+      }
+    }
+
+    function displayCurrentPrompt() {
+      if (prompts.length === 0) return;
+      const prompt = prompts[currentPromptIdx];
+      document.getElementById('prompt-current-num').textContent = currentPromptIdx + 1;
+      document.getElementById('prompt-total-num').textContent = prompts.length;
+      document.getElementById('card-prompt-id').textContent = `Prompt #${prompt.id || (currentPromptIdx + 1)}`;
+      document.getElementById('prompt-text-display').textContent = prompt.text;
+
+      // Reset recording state
+      recordedBlob = null;
+      document.getElementById('btn-submit').disabled = true;
+      document.getElementById('playback-container').classList.add('hidden');
+      document.getElementById('recording-timer').textContent = "00:00";
+    }
+
+    function prevPrompt() {
+      if (currentPromptIdx > 0) {
+        currentPromptIdx--;
+        displayCurrentPrompt();
+      }
+    }
+
+    function nextPrompt() {
+      if (currentPromptIdx < prompts.length - 1) {
+        currentPromptIdx++;
+        displayCurrentPrompt();
+      } else {
+        alert("🎉 You have reached the end of the prompts list! Thank you for contributing!");
+      }
+    }
+
+    // Toggle Recording
+    async function toggleRecord() {
+      if (isRecording) {
+        stopRecording();
+      } else {
+        await startRecording();
+      }
+    }
+
+    async function startRecording() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            channelCount: 1,
+            sampleRate: 16000,
+            echoCancellation: true,
+            noiseSuppression: true
+          }
+        });
+
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(stream);
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) recordedChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          recordedBlob = new Blob(recordedChunks, { type: 'audio/wav' });
+          const audioUrl = URL.createObjectURL(recordedBlob);
+          const previewAudio = document.getElementById('audio-preview');
+          previewAudio.src = audioUrl;
+
+          const duration = Math.round((Date.now() - recordingStartTime) / 1000);
+          document.getElementById('playback-duration').textContent = `${duration}s`;
+          document.getElementById('playback-container').classList.remove('hidden');
+          document.getElementById('btn-submit').disabled = false;
+
+          // Stop mic tracks
+          stream.getTracks().forEach(t => t.stop());
+        };
+
+        mediaRecorder.start();
+        isRecording = true;
+        recordingStartTime = Date.now();
+
+        // UI Updates
+        const btn = document.getElementById('btn-record');
+        btn.className = "w-full sm:w-auto px-8 py-3.5 rounded-2xl font-bold text-base bg-red-700 text-white shadow-xl shadow-red-500/40 transition flex items-center justify-center space-x-2 recording-active";
+        document.getElementById('record-btn-icon').textContent = "⏹️";
+        document.getElementById('record-btn-text').textContent = "Stop Recording";
+
+        // Timer
+        timerInterval = setInterval(() => {
+          const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+          const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
+          const secs = String(elapsed % 60).padStart(2, '0');
+          document.getElementById('recording-timer').textContent = `${mins}:${secs}`;
+          if (elapsed >= 15) {
+            stopRecording(); // Cap at 15s
+          }
+        }, 200);
+
+      } catch (err) {
+        alert("Microphone permission denied or device error: " + err.message + "\n\nTip: You can also use the 'Upload audio file' option below if your mobile browser blocks mic access.");
+      }
+    }
+
+    function stopRecording() {
+      if (!isRecording) return;
+      isRecording = false;
+      clearInterval(timerInterval);
+
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+
+      const btn = document.getElementById('btn-record');
+      btn.className = "w-full sm:w-auto px-8 py-3.5 rounded-2xl font-bold text-base bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 text-white shadow-xl shadow-red-500/20 transition flex items-center justify-center space-x-2";
+      document.getElementById('record-btn-icon').textContent = "🔴";
+      document.getElementById('record-btn-text').textContent = "Re-record";
+    }
+
+    // Submit Recording
+    async function submitRecording() {
+      if (!recordedBlob) return;
+      const submitBtn = document.getElementById('btn-submit');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = "<span>⏳ Uploading...</span>";
+
+      const currentPrompt = prompts[currentPromptIdx];
+      const formData = new FormData();
+      formData.append('file', recordedBlob, `prompt_${currentPrompt.id || currentPromptIdx + 1}.wav`);
+      formData.append('prompt_id', currentPrompt.id || currentPromptIdx + 1);
+      formData.append('text', currentPrompt.text);
+      formData.append('speaker', getSpeakerName());
+
+      try {
+        const res = await fetch(`${API_URL}/api/v1/collector/upload`, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          await fetchStats();
+          nextPrompt();
+        } else {
+          alert("Upload failed: " + (await res.text()));
+        }
+      } catch (e) {
+        alert("Upload error: " + e.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = "<span>✅ Save & Next Prompt</span>";
+      }
+    }
+
+    // Upload Selected File Alternative
+    async function uploadSelectedFile() {
+      const fileInput = document.getElementById('file-upload-input');
+      if (!fileInput.files || fileInput.files.length === 0) {
+        alert("Please select an audio file first.");
+        return;
+      }
+
+      const currentPrompt = prompts[currentPromptIdx];
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+      formData.append('prompt_id', currentPrompt.id || currentPromptIdx + 1);
+      formData.append('text', currentPrompt.text);
+      formData.append('speaker', getSpeakerName());
+
+      try {
+        const res = await fetch(`${API_URL}/api/v1/collector/upload`, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (res.ok) {
+          alert("File successfully saved!");
+          fileInput.value = "";
+          await fetchStats();
+          nextPrompt();
+        } else {
+          alert("Upload failed: " + (await res.text()));
+        }
+      } catch (e) {
+        alert("Upload error: " + e.message);
+      }
+    }
+
+    // Fetch Running Dataset Stats
+    async function fetchStats() {
+      try {
+        const res = await fetch(`${API_URL}/api/v1/collector/stats`);
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('stat-total-clips').textContent = data.total_clips;
+          document.getElementById('stat-total-mins').textContent = data.total_minutes;
+          document.getElementById('stat-speakers-count').textContent = Object.keys(data.speakers || {}).length;
+        }
+      } catch (e) {}
+    }
+
+    // Admin Modal
+    function toggleAdminModal() {
+      const modal = document.getElementById('admin-modal');
+      modal.classList.toggle('hidden');
+      if (!modal.classList.contains('hidden')) {
+        document.getElementById('admin-prompts-input').value = prompts.map(p => p.text).join('\n');
+      }
+    }
+
+    async function saveAdminPrompts() {
+      const rawText = document.getElementById('admin-prompts-input').value.trim();
+      if (!rawText) return;
+      try {
+        const res = await fetch(`${API_URL}/api/v1/collector/prompts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ raw_text: rawText })
+        });
+        if (res.ok) {
+          await fetchPrompts();
+          toggleAdminModal();
+          alert("Prompts updated successfully!");
+        }
+      } catch (e) {
+        alert("Failed to update prompts: " + e.message);
+      }
+    }
+  </script>
+</body>
+</html>
