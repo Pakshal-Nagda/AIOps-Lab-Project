@@ -47,8 +47,8 @@ class StreamingVAD:
         self,
         sample_rate: int = 16000,
         energy_threshold: float = 0.012,
-        min_speech_duration_s: float = 0.35,
-        line_pause_s: float = 0.75,
+        min_speech_duration_s: float = 0.25,
+        line_pause_s: float = 0.45,
         max_allowed_pause_s: float = 1.5
     ):
         self.sample_rate = sample_rate
@@ -62,6 +62,7 @@ class StreamingVAD:
         self.total_speech_samples: int = 0
         self.silence_samples: int = 0
         self.inter_line_silence_samples: int = 0
+        self.current_lead_pause_s: float = 0.0
         self.is_speaking: bool = False
         self.long_pause_emitted: bool = False
         self.session_time_samples: int = 0
@@ -90,6 +91,7 @@ class StreamingVAD:
             if not self.is_speaking:
                 self.is_speaking = True
                 lead_pause_s = self.inter_line_silence_samples / self.sample_rate
+                self.current_lead_pause_s = lead_pause_s
                 is_long_lead = lead_pause_s >= (self.max_allowed_pause_samples / self.sample_rate)
                 events.append({
                     "event": "speech_start",
@@ -115,6 +117,7 @@ class StreamingVAD:
                 })
                 self.speech_buffer = []
                 self.total_speech_samples = 0
+                self.current_lead_pause_s = 0.0
 
         else:
             self.silence_samples += chunk_len
@@ -124,18 +127,25 @@ class StreamingVAD:
                 # In speech, now encountering trailing silence
                 self.speech_buffer.append(chunk)
 
-                # Check if silence reached cadence pause duration (0.7s)
+                # Check if silence reached cadence pause duration
                 if self.silence_samples >= self.line_pause_samples:
                     if self.total_speech_samples >= self.min_speech_samples:
-                        # Full utterance captured. Trim excessive trailing silence from speech buffer.
+                        # Full utterance captured. Trim trailing silence from audio passed to ASR
                         accumulated_audio = np.concatenate(self.speech_buffer)
-                        pause_duration = self.silence_samples / self.sample_rate
-                        is_long = pause_duration >= (self.max_allowed_pause_samples / self.sample_rate)
+                        if self.silence_samples > 0 and len(accumulated_audio) > self.silence_samples:
+                            speech_audio = accumulated_audio[:-self.silence_samples]
+                        else:
+                            speech_audio = accumulated_audio
+
+                        trailing_pause = self.silence_samples / self.sample_rate
+                        # Pause duration is the leading hesitation if any, or trailing cadence pause
+                        effective_pause = max(self.current_lead_pause_s, trailing_pause)
+                        is_long = effective_pause >= (self.max_allowed_pause_samples / self.sample_rate)
 
                         events.append({
                             "event": "utterance_boundary",
-                            "audio": accumulated_audio,
-                            "pause_duration": round(pause_duration, 2),
+                            "audio": speech_audio,
+                            "pause_duration": round(effective_pause, 2),
                             "is_long_pause": is_long
                         })
 
@@ -143,6 +153,7 @@ class StreamingVAD:
                     self.speech_buffer = []
                     self.total_speech_samples = 0
                     self.is_speaking = False
+                    self.current_lead_pause_s = 0.0
             else:
                 # Silence between lines or before recitation starts
                 if not self.long_pause_emitted and self.inter_line_silence_samples >= self.max_allowed_pause_samples:

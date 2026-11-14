@@ -10,6 +10,30 @@ import onnxruntime as ort
 # Punctuation and non-phonetic characters to ignore during Sanskrit/Prakrit phonetic comparison
 NON_PHONETIC_CHARS = set(" \t\r\n।॥-–—.,?!;:()[]{}'\"“”‘’*")
 
+def clean_devanagari_input(text: str) -> str:
+    """
+    Cleans non-Devanagari characters from reference text,
+    preserving newlines, spaces, and Devanagari characters (U+0900 to U+097F).
+    If no Devanagari characters exist in the input, returns an empty string "".
+    """
+    if not text or not re.search(r'[\u0900-\u097F]', text):
+        return ""
+
+    # Keep only Devanagari characters and whitespace (spaces, tabs, newlines)
+    cleaned = re.sub(r'[^\u0900-\u097F\s]', '', text)
+
+    # Normalize lines: collapse inline whitespace while keeping newlines
+    lines = []
+    for line in cleaned.splitlines():
+        line_clean = re.sub(r'[^\S\r\n]+', ' ', line).strip()
+        if line_clean and re.search(r'[\u0900-\u097F]', line_clean):
+            lines.append(line_clean)
+
+    if not lines:
+        return ""
+
+    return "\n".join(lines)
+
 def space_agnostic_align(ref_text: str, trans_text: str) -> Tuple[List[Dict], int, int]:
     """
     Phonetically aligns reference text and transcribed text ignoring all spaces and punctuation.
@@ -153,6 +177,7 @@ class SushrotaVerifier:
         opts = ort.SessionOptions()
         opts.inter_op_num_threads = 2
         opts.intra_op_num_threads = 4
+        opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
         
         self.prep_session = ort.InferenceSession(prep_path, sess_options=opts, providers=['CPUExecutionProvider'])
 
@@ -163,6 +188,8 @@ class SushrotaVerifier:
         with open(vocab_path, "r", encoding="utf-8") as f:
             self.vocab = json.load(f)
 
+        import requests
+        self.session_http = requests.Session()
         self.mlflow_serving_url = os.getenv("MLFLOW_SERVING_URL", "http://localhost:5001/invocations")
         print(f"SushrotaVerifier initialized successfully! Vocabulary size: {len(self.vocab)} (MLflow Serving URL: {self.mlflow_serving_url})")
 
@@ -175,7 +202,6 @@ class SushrotaVerifier:
         # 1. Attempt inference via MLflow Model Serving
         if self.mlflow_serving_url:
             try:
-                import requests
                 import base64
                 import io
 
@@ -194,7 +220,7 @@ class SushrotaVerifier:
                     payload = {"dataframe_records": [{"audio_base64": b64_str}]}
 
                 if payload:
-                    resp = requests.post(self.mlflow_serving_url, json=payload, timeout=4.0)
+                    resp = self.session_http.post(self.mlflow_serving_url, json=payload, timeout=1.5)
                     if resp.status_code == 200:
                         preds = resp.json().get("predictions", [])
                         if preds and "transcription" in preds[0] and preds[0].get("status") == "success":
@@ -304,7 +330,9 @@ class ContinuousSutraAligner:
     ):
         self.verifier = verifier
         self.max_pause_s = max_pause_s
-        self.orig_text = reference_text.strip()
+        self.orig_text = clean_devanagari_input(reference_text)
+        ref_lines = [l for l in self.orig_text.splitlines() if l.strip()]
+        self.total_lines = len(ref_lines) if ref_lines else (1 if self.orig_text else 0)
 
         # Build clean phonetic representation and index map
         self.clean_ref: List[str] = []
@@ -384,6 +412,12 @@ class ContinuousSutraAligner:
             self.all_pauses.append(pause_duration)
         if is_long_pause:
             self.long_pauses.append(pause_duration)
+            pause_token = {
+                "type": "pause_badge",
+                "text": f"[⏸️ {pause_duration:.1f}s]",
+                "duration_s": round(pause_duration, 1)
+            }
+            tokens.insert(0, pause_token)
 
         overall_acc = round(
             (self.total_correct_chars / self.total_processed_chars * 100) if self.total_processed_chars > 0 else 100.0,
@@ -394,6 +428,7 @@ class ContinuousSutraAligner:
             1
         )
 
+        lines_done = min(self.total_lines, len(self.annotated_chunks) + 1)
         chunk_result = {
             "transcription": transcription,
             "tokens": tokens,
@@ -401,8 +436,14 @@ class ContinuousSutraAligner:
             "pause_duration": round(pause_duration, 2),
             "is_long_pause": is_long_pause,
             "overall_accuracy": overall_acc,
+            "accuracy_percentage": overall_acc,
             "progress_percentage": progress,
+            "line_index": lines_done,
+            "lines_completed": lines_done,
+            "total_lines": self.total_lines,
             "total_long_pauses": len(self.long_pauses),
+            "total_hesitations": len(self.long_pauses),
+            "hesitation_count": len(self.long_pauses),
             "is_completed": self.cursor_clean_idx >= self.total_phonetic_chars
         }
         self.annotated_chunks.append(chunk_result)
@@ -415,14 +456,20 @@ class ContinuousSutraAligner:
             1
         )
         avg_pause = round(sum(self.all_pauses) / len(self.all_pauses), 2) if self.all_pauses else 0.0
+        lines_done = min(self.total_lines, len(self.annotated_chunks))
 
         return {
             "overall_accuracy": overall_acc,
+            "accuracy_percentage": overall_acc,
             "total_phonetic_chars": self.total_phonetic_chars,
             "processed_chars": self.total_processed_chars,
             "correct_chars": self.total_correct_chars,
             "total_chunks": len(self.annotated_chunks),
+            "lines_completed": lines_done,
+            "total_lines": self.total_lines,
             "total_long_pauses": len(self.long_pauses),
+            "total_hesitations": len(self.long_pauses),
+            "hesitation_count": len(self.long_pauses),
             "average_pause_seconds": avg_pause,
             "completed_all": self.cursor_clean_idx >= self.total_phonetic_chars
         }

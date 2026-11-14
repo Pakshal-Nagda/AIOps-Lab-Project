@@ -11,7 +11,7 @@ import requests
 import numpy as np
 
 from src.vad_checker import detect_long_pauses, StreamingVAD
-from src.aligner import SushrotaVerifier, ContinuousSutraAligner
+from src.aligner import SushrotaVerifier, ContinuousSutraAligner, clean_devanagari_input
 
 app = FastAPI(
     title="Project Medhā - Sanskrit Recitation & Verification API",
@@ -81,6 +81,13 @@ async def analyze_recitation(
     """
     REQUEST_COUNT.labels(endpoint='/api/v1/analyze').inc()
     start_time = time.time()
+
+    cleaned_ref = clean_devanagari_input(reference_text)
+    if not cleaned_ref:
+        raise HTTPException(
+            status_code=400,
+            detail="Reference text contains no Devanagari characters. Please provide Sanskrit or Prakrit text."
+        )
     
     temp_file = f"temp_{int(time.time()*1000)}_{file.filename}"
     with open(temp_file, "wb") as buffer:
@@ -339,26 +346,35 @@ async def websocket_recite_endpoint(websocket: WebSocket):
 
                 if action == "start":
                     ref_text = data.get("reference_text", "")
+                    cleaned_ref = clean_devanagari_input(ref_text)
+                    if not cleaned_ref:
+                        await websocket.send_json({
+                            "event": "error",
+                            "message": "Reference text contains no Devanagari characters. Please provide valid Sanskrit or Prakrit text."
+                        })
+                        continue
+
                     max_pause_s = float(data.get("max_pause_s", 1.5))
                     energy_threshold = float(data.get("energy_threshold", 0.012))
-                    line_pause_s = float(data.get("line_pause_s", 0.70))
+                    line_pause_s = float(data.get("line_pause_s", 0.45))
 
                     session = ContinuousSutraAligner(
-                        reference_text=ref_text,
+                        reference_text=cleaned_ref,
                         verifier=verifier,
                         max_pause_s=max_pause_s
                     )
                     vad = StreamingVAD(
                         sample_rate=16000,
                         energy_threshold=energy_threshold,
-                        min_speech_duration_s=0.30,
+                        min_speech_duration_s=0.25,
                         line_pause_s=line_pause_s,
                         max_allowed_pause_s=max_pause_s
                     )
 
                     await websocket.send_json({
                         "event": "session_started",
-                        "total_phonetic_chars": session.total_phonetic_chars
+                        "total_phonetic_chars": session.total_phonetic_chars,
+                        "total_lines": session.total_lines
                     })
 
                 elif action == "stop":
