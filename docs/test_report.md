@@ -13,11 +13,11 @@
 
 All planned automated test cases spanning unit logic, phonetic alignment, streaming VAD, API endpoints, WebSocket live streaming, Ray data cleaning, and empirical model evaluation were executed against the Project Medhā test suite. 
 
-* **Total Test Cases Executed:** 24  
-* **Passed:** 24  
+* **Total Test Cases Executed:** 27  
+* **Passed:** 27  
 * **Failed:** 0  
 * **Pass Rate:** **100%**  
-* **Total Pytest Execution Duration:** 9.13 seconds  
+* **Total Pytest Execution Duration:** 8.22 seconds  
 * **Acoustic Character Accuracy:** **75.31%** (Exceeds 70.0% acceptance threshold)  
 * **Character Error Rate (CER):** **24.69%** (Meets $\le 25.0\%$ target threshold)  
 * **Real-Time Factor (RTF):** **0.0396x** (~25x faster than real-time audio playback)  
@@ -51,8 +51,11 @@ All planned automated test cases spanning unit logic, phonetic alignment, stream
 | **TC-20** | Data Collector | `test_collector_audio_upload_flow` | **PASS** | 0.035s |
 | **TC-21** | Audio Analysis | `test_analyze_recitation_api` | **PASS** | 0.410s |
 | **TC-22** | Audio Analysis | `test_analyze_recitation_missing_reference` | **PASS** | 0.007s |
-| **TC-23** | Ray Data Prep | `test_ray_devanagari_text_cleaning` | **PASS** | 0.001s |
-| **TC-24** | Ray Data Prep | `test_ray_devanagari_empty_or_non_indic` | **PASS** | 0.001s |
+| **TC-23** | Audio Analysis | `test_analyze_recitation_non_devanagari_text` | **PASS** | 0.008s |
+| **TC-24** | Text Cleaning | `test_clean_devanagari_input_valid` | **PASS** | 0.001s |
+| **TC-25** | Text Cleaning | `test_clean_devanagari_input_non_indic_treated_empty` | **PASS** | 0.001s |
+| **TC-26** | Ray Data Prep | `test_ray_devanagari_text_cleaning` | **PASS** | 0.001s |
+| **TC-27** | Ray Data Prep | `test_ray_devanagari_empty_or_non_indic` | **PASS** | 0.001s |
 
 ---
 

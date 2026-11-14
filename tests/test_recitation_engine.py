@@ -12,7 +12,8 @@ from src.aligner import (
     split_sutra_lines, 
     space_agnostic_align, 
     SushrotaVerifier, 
-    ContinuousSutraAligner
+    ContinuousSutraAligner,
+    clean_devanagari_input
 )
 from src.vad_checker import StreamingVAD, detect_long_pauses
 from backend.main import app
@@ -151,16 +152,35 @@ def test_continuous_sutra_aligner_multiline_and_pauses():
     assert chunk1 is not None
     assert chunk1["is_long_pause"] is False
     assert chunk1["pause_duration"] == 0.7
+    assert chunk1["lines_completed"] == 1
+    assert chunk1["total_lines"] == 2
 
     # Process second utterance with hesitation pause (2.1s)
     chunk2 = aligner.process_utterance(dummy_audio, pause_duration=2.1)
     assert chunk2 is not None
     assert chunk2["is_long_pause"] is True
     assert chunk2["total_long_pauses"] == 1
+    assert chunk2["lines_completed"] == 2
+    assert chunk2["total_hesitations"] == 1
+    # Verify hesitation is annotated inline in canvas tokens!
+    assert any(t.get("type") == "pause_badge" for t in chunk2["tokens"])
 
     summary = aligner.get_session_summary()
     assert summary["total_long_pauses"] == 1
     assert summary["total_chunks"] == 2
+    assert summary["lines_completed"] == 2
+    assert summary["hesitation_count"] == 1
+    assert summary["accuracy_percentage"] >= 0.0
+
+def test_clean_devanagari_input_valid():
+    raw = "(1) णमो अरिहंताणं - [Line 1]\n(2) णमो सिद्धाणं"
+    cleaned = clean_devanagari_input(raw)
+    assert cleaned == "णमो अरिहंताणं\nणमो सिद्धाणं"
+
+def test_clean_devanagari_input_non_indic_treated_empty():
+    assert clean_devanagari_input("Hello World 12345") == ""
+    assert clean_devanagari_input("   !@#$%^&*()   ") == ""
+    assert clean_devanagari_input("") == ""
 
 # -------------------------------------------------------------
 # 5. FastAPI Endpoints & WebSocket Integration Tests
@@ -336,6 +356,15 @@ def test_analyze_recitation_missing_reference():
         files = {"file": ("clip.wav", f.read(), "audio/wav")}
     res = client.post("/api/v1/analyze", files=files)
     assert res.status_code == 422
+
+def test_analyze_recitation_non_devanagari_text():
+    sample_wav = "data/processed_audio/clip_1794387514520_Sweta_p23.wav"
+    with open(sample_wav, "rb") as f:
+        files = {"file": ("clip.wav", f.read(), "audio/wav")}
+    data = {"reference_text": "Non Devanagari English 12345"}
+    res = client.post("/api/v1/analyze", files=files, data=data)
+    assert res.status_code == 400
+    assert "no Devanagari" in res.json().get("detail", "")
 
 # -------------------------------------------------------------
 # 7. Ray Data Cleaning Logic Unit Tests

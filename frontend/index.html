@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Project Medhā | Live Sanskrit & Prakrit Recitation Verifier</title>
+  <title>Project Medhā | Sanskrit & Prakrit Live Recitation Verifier</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Google Fonts for Devanagari and Clean UI -->
@@ -37,11 +37,11 @@
   </script>
   <style>
     .akshara-correct {
-      color: #10b981;
+      color: #34d399;
       font-weight: 500;
     }
     .akshara-mispronounced {
-      background-color: rgba(239, 68, 68, 0.15);
+      background-color: rgba(239, 68, 68, 0.18);
       color: #f87171;
       border-bottom: 2px solid #ef4444;
       padding: 0 2px;
@@ -50,7 +50,7 @@
       display: inline-block;
     }
     .akshara-missing {
-      background-color: rgba(245, 158, 11, 0.15);
+      background-color: rgba(245, 158, 11, 0.18);
       color: #fbbf24;
       border-bottom: 2px dashed #f59e0b;
       padding: 0 2px;
@@ -59,22 +59,22 @@
       display: inline-block;
     }
     .akshara-extra {
-      background-color: rgba(168, 85, 247, 0.15);
+      background-color: rgba(168, 85, 247, 0.18);
       color: #c084fc;
       padding: 0 2px;
       border-radius: 3px;
       display: inline-block;
     }
-    .manuscript-paper {
-      background: #0f172a;
-      box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6);
+    .manuscript-canvas {
+      background: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 100%);
+      box-shadow: inset 0 2px 20px rgba(0, 0, 0, 0.7);
     }
     @keyframes pulseGlow {
-      0%, 100% { box-shadow: 0 0 15px rgba(234, 88, 12, 0.3); }
-      50% { box-shadow: 0 0 35px rgba(234, 88, 12, 0.7); }
+      0%, 100% { box-shadow: 0 0 15px rgba(234, 88, 12, 0.4); transform: scale(1); }
+      50% { box-shadow: 0 0 35px rgba(234, 88, 12, 0.85); transform: scale(1.02); }
     }
     .recording-glow {
-      animation: pulseGlow 2s infinite;
+      animation: pulseGlow 2s infinite ease-in-out;
     }
     .verse-flow {
       white-space: pre-wrap;
@@ -85,346 +85,352 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans flex flex-col selection:bg-orange-500 selection:text-white">
 
-  <!-- Top Navigation & System Status Bar -->
-  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+  <!-- Top Clean Navigation Bar -->
+  <header class="border-b border-slate-800/80 bg-slate-900/70 backdrop-blur sticky top-0 z-40">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center space-x-3">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/20 text-white font-title text-2xl font-bold">
           मे
         </div>
         <div>
-          <h1 class="text-xl font-bold tracking-tight text-white flex items-center space-x-2">
+          <h1 class="text-lg font-bold tracking-tight text-white flex items-center space-x-2">
             <span>Project Medhā</span>
-            <span class="text-xs px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">v1.0 AIOps</span>
+            <span class="text-[10px] tracking-wide font-mono px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/20">मेधा</span>
           </h1>
-          <p class="text-xs text-slate-400">Continuous Sanskrit & Prakrit Live Recitation Verifier</p>
+          <p class="text-xs text-slate-400">Sanskrit & Prakrit Recitation Verifier</p>
         </div>
       </div>
 
-      <!-- Quick Server Health Status -->
-      <div class="flex items-center space-x-3 text-xs">
-        <a href="collector.html" class="flex items-center space-x-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg hover:bg-emerald-500/20 transition font-medium">
-          <span>🎙️ Record Dataset</span>
+      <!-- Action Utilities -->
+      <div class="flex items-center space-x-2 sm:space-x-3">
+        <div id="backend-status-badge" class="hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-slate-800/60 border border-slate-700/50 text-xs text-slate-400">
+          <span id="backend-status-dot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+          <span id="backend-status-text">Connecting...</span>
+        </div>
+
+        <button onclick="openModal('user-manual-modal')" class="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs font-medium text-slate-200 border border-slate-700/60 flex items-center space-x-1.5 transition">
+          <span>📖</span>
+          <span>User Manual</span>
+        </button>
+
+        <a href="collector.html" class="px-3 py-1.5 rounded-lg bg-orange-500/20 hover:bg-orange-500/30 text-xs font-medium text-orange-300 border border-orange-500/40 flex items-center space-x-1.5 transition">
+          <span>🎙️</span>
+          <span class="hidden sm:inline">Contribute Audio</span>
         </a>
-        <div class="hidden sm:flex items-center space-x-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span class="text-slate-300">ASR: <strong class="text-white">Quantized Conformer-CTC (INT8)</strong></span>
-        </div>
-        <div class="flex items-center space-x-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
-          <span id="backend-status-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
-          <span id="backend-status-text" class="text-slate-300">Checking Backend...</span>
-        </div>
       </div>
     </div>
   </header>
 
-  <!-- Main Tabs Selector -->
-  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
-    <div class="flex border-b border-slate-800 space-x-8 mb-6">
+  <!-- Main Content Container -->
+  <main class="flex-1 max-w-5xl w-full mx-auto px-4 py-6 space-y-6">
+
+    <!-- Mode Selector Tabs (Simplified: 2 intuitive choices) -->
+    <div class="flex items-center space-x-4 border-b border-slate-800">
       <button id="tab-btn-live" onclick="switchTab('live')" class="pb-3 text-sm font-semibold border-b-2 border-orange-500 text-orange-400 flex items-center space-x-2 transition">
-        <span>🎙️ Continuous Recitation</span>
-        <span class="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-300">Decoupled Stream</span>
+        <span>🎙️ Live Recitation (Microphone)</span>
       </button>
       <button id="tab-btn-upload" onclick="switchTab('upload')" class="pb-3 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2 transition">
         <span>📁 Audio File Verification</span>
-        <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">REST API</span>
-      </button>
-      <button id="tab-btn-pipeline" onclick="switchTab('pipeline')" class="pb-3 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2 transition">
-        <span>📊 AIOps Pipeline & Metrics</span>
       </button>
     </div>
 
     <!-- ========================================================== -->
-    <!-- TAB 1: CONTINUOUS DECOUPLED RECITATION -->
+    <!-- TAB 1: LIVE RECITATION (MAIN INTUITIVE INTERFACE) -->
     <!-- ========================================================== -->
     <section id="tab-content-live" class="space-y-6">
-      
-      <!-- Input Panel (Collapsible during recitation for blind test) -->
-      <div id="verse-input-panel" class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl transition-all duration-300">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-          <div>
-            <h2 class="text-base font-bold text-white flex items-center space-x-2">
-              <span>Reference Sutra / Stotra Text</span>
-            </h2>
-            <p class="text-xs text-slate-400">Paste any Sanskrit or Prakrit text (from single lines to multi-page stotras with 100s of lines). Spaces are automatically ignored in phonetic scoring.</p>
-          </div>
-          <div class="flex items-center space-x-2 text-xs">
-            <span class="text-slate-400">Cadence Threshold:</span>
-            <span class="text-amber-400 font-mono font-semibold">1.5s Max Pause</span>
-          </div>
+
+      <!-- Step 1: Sutra Verse Input Area with Blind Test Toggle -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+        <div class="flex items-center justify-between">
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">
+            1. Enter Verse / Shloka to Recite
+          </label>
+          <button id="blind-test-toggle" onclick="toggleBlindTest()" class="text-sm font-semibold text-orange-400 hover:text-orange-300 flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/30 shadow-sm transition">
+            <span id="blind-icon" class="text-base">👁️</span>
+            <span id="blind-text">Hide Text for Blind Memorization Test</span>
+          </button>
         </div>
 
-        <!-- Reference Text Input Area -->
-        <textarea id="reference-input" rows="5" placeholder="Paste or type your Sanskrit / Prakrit verse text here...
-Example:
-णमो अरिहंताणं
-णमो सिद्धाणं
-णमो आयरियाणं
-णमो उवज्झायाणं
-णमो लोए सव्वसाहूणं" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-lg font-devanagari text-amber-100 placeholder-slate-600 focus:ring-2 focus:ring-orange-500 focus:outline-none leading-relaxed tracking-wide"></textarea>
+        <div id="verse-input-wrapper">
+          <textarea id="reference-input" rows="3"
+            class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-4 py-3 text-white font-devanagari text-lg focus:outline-none focus:border-orange-500 transition resize-y"
+            placeholder="Paste your Sanskrit or Prakrit verse here (single or multi-line)...&#10;e.g. णमो अरिहंताणं णमो सिद्धाणं णमो आयरियाणं णमो उवज्झायाणं णमो लोए सव्वसाहूणं"></textarea>
+          <p class="text-[11px] text-slate-400 mt-1">
+            ✨ Tip: Spaces and typographic punctuation in Sanskrit/Prakrit are purely visual conventions and are never penalized.
+          </p>
+        </div>
 
-        <!-- Recitation Controls Bar -->
-        <div class="mt-4 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-4">
-          <div class="flex items-center space-x-3 flex-1 min-w-[260px]">
-            <canvas id="mic-visualizer" width="200" height="36" class="bg-slate-950 rounded-lg border border-slate-800"></canvas>
-            <div id="live-indicator-badge" class="hidden px-2.5 py-1 rounded-full text-xs font-semibold bg-red-500/20 text-red-400 border border-red-500/30 flex items-center space-x-1.5 animate-pulse">
-              <span class="w-2 h-2 rounded-full bg-red-500"></span>
-              <span id="live-indicator-text">LISTENING</span>
+        <div id="blind-placeholder" class="hidden py-4 text-center border border-dashed border-slate-800 rounded-xl bg-slate-950/50">
+          <p class="text-sm text-slate-300 font-medium">🙈 Blind Memorization Mode Active</p>
+          <p class="text-xs text-slate-500">Recite from memory! Each line will materialize below as you complete it.</p>
+        </div>
+      </div>
+
+      <!-- Step 2: Recitation Control Deck & Live Metrics (Merged) -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl space-y-5">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <!-- Big Record Button -->
+          <div class="flex items-center space-x-4 w-full sm:w-auto">
+            <button id="recite-toggle-btn" onclick="toggleRecitation()"
+              class="flex-1 sm:flex-initial px-7 py-3.5 rounded-xl font-bold text-sm tracking-wide transition flex items-center justify-center space-x-3 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-lg shadow-orange-500/20">
+              <span id="recite-btn-icon" class="text-lg">🎙️</span>
+              <span id="recite-btn-text">Begin Recitation</span>
+            </button>
+
+            <!-- Audio Waveform Indicator -->
+            <div id="audio-meter" class="hidden flex items-end space-x-1 h-8 px-2 py-1 bg-slate-950 border border-slate-800 rounded-lg">
+              <span class="w-1 bg-orange-500 rounded-full h-2 transition-all duration-75"></span>
+              <span class="w-1 bg-orange-500 rounded-full h-4 transition-all duration-75"></span>
+              <span class="w-1 bg-orange-500 rounded-full h-6 transition-all duration-75"></span>
+              <span class="w-1 bg-orange-500 rounded-full h-3 transition-all duration-75"></span>
+              <span class="w-1 bg-orange-500 rounded-full h-5 transition-all duration-75"></span>
             </div>
           </div>
 
-          <div class="flex items-center space-x-3">
-            <button id="btn-start-recite" onclick="toggleRecitation()" class="px-6 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 text-white shadow-lg shadow-orange-500/25 transition flex items-center space-x-2">
-              <span id="recite-btn-icon">🎙️</span>
-              <span id="recite-btn-label">Start Continuous Recitation</span>
-            </button>
-            <button id="btn-reset" onclick="resetSession()" class="px-3.5 py-2.5 rounded-xl text-sm bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
-              🔄 Clear
-            </button>
+          <!-- Live Status Pill -->
+          <div class="flex items-center space-x-2 text-xs text-slate-400">
+            <span>Status:</span>
+            <span id="manuscript-status-badge" class="px-3 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-medium">Ready</span>
+          </div>
+        </div>
+
+        <!-- Merged Performance HUD Metrics -->
+        <div class="grid grid-cols-3 gap-3 pt-3 border-t border-slate-800/80">
+          <div class="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3 text-center">
+            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Pronunciation Accuracy</div>
+            <div id="stat-accuracy" class="text-xl sm:text-2xl font-extrabold text-emerald-400 mt-1">-- %</div>
+          </div>
+          <div class="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3 text-center">
+            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Cadence Hesitations</div>
+            <div id="stat-pauses" class="text-xl sm:text-2xl font-extrabold text-amber-400 mt-1">0</div>
+          </div>
+          <div class="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3 text-center">
+            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Lines Completed</div>
+            <div id="stat-progress" class="text-xl sm:text-2xl font-extrabold text-orange-400 mt-1">0 / 0</div>
           </div>
         </div>
       </div>
 
-      <!-- Top Metrics HUD (Active during recitation) -->
-      <div id="metrics-hud" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-wrap items-center justify-between gap-4">
-        <div class="flex items-center space-x-6">
-          <div>
-            <div class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Overall Accuracy</div>
-            <div id="hud-accuracy" class="text-2xl font-extrabold text-emerald-400">100.0%</div>
-          </div>
-          <div class="w-px h-8 bg-slate-800"></div>
-          <div>
-            <div class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Cadence & Pauses</div>
-            <div id="hud-pauses" class="text-sm font-semibold text-slate-200">0 Long Pauses (>1.5s)</div>
-          </div>
-          <div class="w-px h-8 bg-slate-800"></div>
-          <div>
-            <div class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Recitation Progress</div>
-            <div id="hud-progress" class="text-sm font-semibold text-orange-400">0% Spoken</div>
-          </div>
-        </div>
-
-        <div class="flex items-center space-x-3 text-xs text-slate-400">
-          <span class="flex items-center space-x-1"><span class="w-2.5 h-2.5 rounded bg-emerald-500"></span><span class="text-slate-300">Correct</span></span>
-          <span class="flex items-center space-x-1"><span class="w-2.5 h-2.5 rounded bg-red-500"></span><span class="text-slate-300">Mispronounced</span></span>
-          <span class="flex items-center space-x-1"><span class="w-2.5 h-2.5 rounded bg-amber-500"></span><span class="text-slate-300">Omission</span></span>
-          <span class="flex items-center space-x-1"><span class="px-1.5 py-0.5 rounded text-[10px] bg-red-500/20 text-red-400 border border-red-500/30">⏸️ >1.5s</span><span class="text-slate-300">Hesitation</span></span>
-        </div>
-      </div>
-
-      <!-- Live Hesitation Warning Banner -->
-      <div id="live-hesitation-alert" class="hidden p-3 bg-red-500/20 border border-red-500/40 rounded-xl text-xs text-red-200 flex items-center space-x-2 animate-bounce">
-        <span class="text-base">⚠️</span>
-        <span id="live-hesitation-msg">Hesitation alert: Long pause detected! Continue reciting...</span>
-      </div>
-
-      <!-- Continuous Manuscript Canvas -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl manuscript-paper relative min-h-[280px]">
-        <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-800 text-xs text-slate-400">
-          <span class="uppercase font-semibold tracking-wider flex items-center space-x-2">
-            <span>📜 Live Recitation Flow</span>
-            <span id="manuscript-status-badge" class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">Ready</span>
+      <!-- Step 3: The Continuous Recitation Canvas -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl manuscript-canvas relative min-h-[220px]">
+        <div class="flex items-center justify-between border-b border-slate-800/80 pb-3 mb-4">
+          <span class="text-xs font-bold tracking-wider uppercase text-slate-400 flex items-center space-x-2">
+            <span>📜 Live Recitation Canvas</span>
           </span>
-          <span class="text-[11px] text-slate-500 italic">Lines stream and materialize in real time as you speak</span>
+          <button onclick="clearCanvas()" class="text-xs text-slate-400 hover:text-slate-200 transition">Clear Canvas</button>
         </div>
 
-        <!-- The Continuous Document Text Container -->
-        <div id="manuscript-flow" class="text-2xl font-devanagari text-slate-300 verse-flow tracking-wide select-text">
-          <span class="text-base text-slate-500 italic font-sans">
-            Your recitation will stream and appear here continuously. Click "Start Continuous Recitation" and speak at your natural cadence.
+        <!-- The Continuous Manuscript Stream -->
+        <div id="manuscript-flow" class="font-devanagari text-xl sm:text-2xl verse-flow text-slate-300">
+          <span class="text-slate-600 font-sans text-sm italic">
+            Your recitation will stream onto this canvas in real-time as you speak. Pronunciation corrections and cadence badges appear inline automatically.
           </span>
         </div>
-      </div>
 
-      <!-- Session Final Summary Box -->
-      <div id="session-summary-box" class="hidden bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl space-y-4">
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pb-4 border-b border-slate-800">
-          <div>
-            <h3 class="text-lg font-bold text-white flex items-center space-x-2">
-              <span>Recitation Evaluation Summary</span>
-              <span id="summary-grade-badge" class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">उत्कृष्ट (Excellent)</span>
-            </h3>
-            <p class="text-xs text-slate-400">Full phonetic accuracy and cadence analysis across the entire sutra.</p>
+        <!-- Visual Feedback Legend -->
+        <div class="mt-8 pt-4 border-t border-slate-800/60 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">
+          <div class="flex items-center space-x-4 flex-wrap">
+            <span class="flex items-center space-x-1">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
+              <span class="text-emerald-400 font-medium">Correct</span>
+            </span>
+            <span class="flex items-center space-x-1">
+              <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
+              <span class="text-red-400 font-medium">Mispronounced</span>
+            </span>
+            <span class="flex items-center space-x-1">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
+              <span class="text-amber-400 font-medium">Skipped Akshara</span>
+            </span>
+            <span class="flex items-center space-x-1">
+              <span class="w-2.5 h-2.5 rounded-full bg-purple-500 inline-block"></span>
+              <span class="text-purple-400 font-medium">Added Sound</span>
+            </span>
+            <span class="flex items-center space-x-1">
+              <span class="text-amber-400 font-mono text-[11px] bg-amber-500/10 px-1 py-0.5 rounded border border-amber-500/20">[⏸️ 1.8s]</span>
+              <span class="text-amber-300">Hesitation (&gt;1.5s)</span>
+            </span>
           </div>
-          <div class="flex items-center space-x-6 text-center">
-            <div>
-              <div id="summary-accuracy" class="text-3xl font-extrabold text-emerald-400">0%</div>
-              <div class="text-[11px] text-slate-400 uppercase tracking-wider">Overall Accuracy</div>
-            </div>
-            <div class="w-px h-8 bg-slate-700"></div>
-            <div>
-              <div id="summary-pauses-count" class="text-2xl font-bold text-amber-400">0</div>
-              <div class="text-[11px] text-slate-400 uppercase tracking-wider">Hesitation Pauses</div>
-            </div>
-            <div class="w-px h-8 bg-slate-700"></div>
-            <div>
-              <div id="summary-avg-pause" class="text-2xl font-bold text-slate-200">0.0s</div>
-              <div class="text-[11px] text-slate-400 uppercase tracking-wider">Avg Cadence</div>
-            </div>
-          </div>
+          <span class="text-[11px] text-slate-500">Unbroken breath across lines is supported</span>
         </div>
       </div>
 
+      <!-- Recitation Complete Banner -->
+      <div id="session-summary-box" class="hidden bg-emerald-950/30 border border-emerald-500/30 rounded-2xl p-5 shadow-xl text-center space-y-2">
+        <h3 class="text-base font-bold text-emerald-300">🎉 Recitation Session Completed!</h3>
+        <p id="session-summary-text" class="text-xs text-slate-300"></p>
+      </div>
     </section>
 
     <!-- ========================================================== -->
-    <!-- TAB 2: AUDIO FILE BATCH VERIFICATION (REST API) -->
+    <!-- TAB 2: AUDIO FILE VERIFICATION (BATCH REST ENDPOINT) -->
     <!-- ========================================================== -->
     <section id="tab-content-upload" class="hidden space-y-6">
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl max-w-2xl mx-auto space-y-5">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-5">
         <div>
-          <h2 class="text-lg font-bold text-white">Pre-Recorded Audio File Analysis</h2>
-          <p class="text-xs text-slate-400">Upload a recorded .wav, .mp3, or .ogg file and verify it against reference text using the `/api/v1/analyze` REST endpoint (space-agnostic alignment enabled).</p>
+          <h2 class="text-base font-bold text-white">Audio File Recitation Verification</h2>
+          <p class="text-xs text-slate-400">Upload a pre-recorded WAV, MP3, or M4A clip to verify pronunciation against reference text.</p>
         </div>
 
-        <div class="space-y-3">
-          <label class="block text-xs font-medium text-slate-300">Reference Verse:</label>
-          <textarea id="upload-ref-text" rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-base font-devanagari text-amber-100 focus:ring-2 focus:ring-orange-500 focus:outline-none">णमो अरिहंताणं णमो सिद्धाणं णमो आयरियाणं णमो उवज्झायाणं णमो लोए सव्वसाहूणं</textarea>
-        </div>
-
-        <div class="space-y-3">
-          <label class="block text-xs font-medium text-slate-300">Audio File (.wav, .mp3, .ogg):</label>
-          <input type="file" id="upload-audio-file" accept="audio/*" class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-orange-500 file:text-white hover:file:bg-orange-600 bg-slate-950 rounded-xl p-2 border border-slate-800">
-        </div>
-
-        <button id="btn-upload-analyze" onclick="analyzeUploadedFile()" class="w-full py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 text-white shadow-lg transition flex items-center justify-center space-x-2">
-          <span>🔍 Run Offline REST Analysis</span>
-        </button>
-
-        <!-- REST Results Box -->
-        <div id="upload-results-box" class="hidden mt-6 pt-5 border-t border-slate-800 space-y-4">
-          <div class="flex items-center justify-between">
-            <span class="text-sm font-bold text-white">REST Analysis Results</span>
-            <span id="upload-latency" class="text-xs font-mono text-slate-400">Latency: 0.0s</span>
-          </div>
-
-          <div class="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-3">
-            <div class="flex items-center justify-between">
-              <span class="text-xs text-slate-400">Phonetic Accuracy:</span>
-              <span id="upload-score" class="text-lg font-bold text-emerald-400">0%</span>
-            </div>
-            <div>
-              <span class="text-xs text-slate-400">Transcribed Recitation:</span>
-              <p id="upload-transcription" class="text-base font-devanagari text-slate-200 mt-1"></p>
-            </div>
-            <div>
-              <span class="text-xs text-slate-400">Phonetic Alignment (Spaces Preserved):</span>
-              <div id="upload-diff-tokens" class="text-base font-devanagari leading-loose mt-1 p-2 bg-slate-900 rounded-lg"></div>
-            </div>
-            <div>
-              <span class="text-xs text-slate-400">Detected Hesitation Pauses (>1.5s):</span>
-              <div id="upload-pauses-list" class="text-xs space-y-1 mt-1 text-slate-300"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ========================================================== -->
-    <!-- TAB 3: AIOPS PIPELINE & PROMETHEUS METRICS -->
-    <!-- ========================================================== -->
-    <section id="tab-content-pipeline" class="hidden space-y-6">
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
-        <div>
-          <h2 class="text-lg font-bold text-white">Project Medhā - AIOps Production Architecture</h2>
-          <p class="text-xs text-slate-400">End-to-end ML lifecycle design compliant with course evaluation guidelines.</p>
-        </div>
-
-        <!-- Architecture Flow Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-            <div class="text-xs font-bold text-orange-400 uppercase tracking-wider">1. Audio Ingestion & VAD</div>
-            <p class="text-xs text-slate-300">Microphone stream captured at 16kHz PCM. Streaming VAD identifies active speech intervals, intra-line pauses, and hesitation gaps (>1.5s).</p>
-          </div>
-          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-            <div class="text-xs font-bold text-amber-400 uppercase tracking-wider">2. Feature Extraction</div>
-            <p class="text-xs text-slate-300">ONNX Preprocessor model converts 16kHz audio array into 80-channel log-mel spectrogram features in real time with zero PyTorch runtime dependencies.</p>
-          </div>
-          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-            <div class="text-xs font-bold text-emerald-400 uppercase tracking-wider">3. Quantized ASR Inference</div>
-            <p class="text-xs text-slate-300">Quantized INT8 Conformer-CTC acoustic model runs on ONNX Runtime CPU provider. Predicts 257-token Sanskrit CTC posteriors decoded into Devanagari text in <150ms.</p>
-          </div>
-          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-            <div class="text-xs font-bold text-blue-400 uppercase tracking-wider">4. Space-Agnostic Aligner</div>
-            <p class="text-xs text-slate-300">Strictly ignores spaces and punctuation in phonetic matching while preserving original formatting. Injects inline hesitation badges directly into continuous flow.</p>
-          </div>
-        </div>
-
-        <!-- Live Links & Metrics Summary -->
-        <div class="p-4 bg-slate-950 rounded-xl border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <form id="upload-form" onsubmit="handleAudioUpload(event)" class="space-y-4">
           <div>
-            <div class="text-sm font-semibold text-white">Prometheus Exporter Instrumentation</div>
-            <div class="text-xs text-slate-400">Scrapes endpoint counters, latency histograms, and active WebSocket connections.</div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Expected Reference Text (Sanskrit / Prakrit)</label>
+            <textarea id="upload-ref-text" rows="2" required
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white font-devanagari text-base focus:outline-none focus:border-orange-500 transition"
+              placeholder="खामेमि सव्व जीवे सव्वे जीवा खमंतु मे मित्ति मे सव्वभूएसु वेरं मज्जं न केणइ"></textarea>
           </div>
-          <div class="flex items-center space-x-3">
-            <a id="link-metrics" href="http://localhost:8000/metrics" target="_blank" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition flex items-center space-x-1.5">
-              <span>📈 View /metrics</span>
-            </a>
-            <a id="link-health" href="http://localhost:8000/health" target="_blank" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition flex items-center space-x-1.5">
-              <span>🏥 View /health</span>
-            </a>
-          </div>
-        </div>
 
-        <!-- Metrics Snapshot -->
-        <div class="space-y-2">
-          <div class="flex items-center justify-between text-xs text-slate-400">
-            <span>Live Prometheus Metrics Feed:</span>
-            <button onclick="fetchPrometheusMetrics()" class="text-orange-400 hover:underline">Refresh</button>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Select Audio Recording</label>
+            <input type="file" id="upload-audio-file" accept="audio/*" required
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs text-slate-300 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-orange-500/20 file:text-orange-400 hover:file:bg-orange-500/30">
           </div>
-          <pre id="metrics-dump" class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-xs font-mono text-emerald-400 overflow-x-auto max-h-60">Loading metrics from backend...</pre>
+
+          <button type="submit" id="upload-submit-btn"
+            class="px-6 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 font-semibold text-xs text-white transition flex items-center space-x-2">
+            <span>Analyze Recording</span>
+          </button>
+        </form>
+
+        <div id="upload-result" class="hidden pt-4 border-t border-slate-800 space-y-4">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Analysis Results</span>
+            <span id="upload-similarity" class="text-sm font-bold text-emerald-400"></span>
+          </div>
+          <div id="upload-diff" class="font-devanagari text-xl verse-flow p-4 bg-slate-950 rounded-xl border border-slate-800"></div>
         </div>
       </div>
     </section>
 
   </main>
 
+  <!-- ========================================================== -->
+  <!-- MODAL 1: USER MANUAL (FOR NON-TECHNICAL USERS) -->
+  <!-- ========================================================== -->
+  <div id="user-manual-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl">
+      <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <span class="text-xl">📖</span>
+          <h2 class="text-lg font-bold text-white">Project Medhā — User Manual</h2>
+        </div>
+        <button onclick="closeModal('user-manual-modal')" class="text-slate-400 hover:text-white text-lg font-bold">&times;</button>
+      </div>
+
+      <div class="p-6 overflow-y-auto space-y-6 text-sm text-slate-300 leading-relaxed">
+        <div>
+          <h3 class="font-bold text-orange-400 text-base mb-1">Welcome to Project Medhā!</h3>
+          <p class="text-xs text-slate-400">Project Medhā is an intelligent Sanskrit & Prakrit recitation assistant that helps students and practitioners master pronunciation, rhythm, and memorization of sacred verses.</p>
+        </div>
+
+        <div class="space-y-4">
+          <div class="p-4 rounded-xl bg-slate-950 border border-slate-800">
+            <h4 class="font-semibold text-white flex items-center space-x-2">
+              <span class="w-6 h-6 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center text-xs font-bold">1</span>
+              <span>Input Your Verse</span>
+            </h4>
+            <p class="text-xs text-slate-400 mt-1">Paste any Sanskrit or Prakrit shloka or sutra into the top input box. It can be single-line or multi-line (1 to 100+ lines). Spaces and typographic punctuation are purely visual conventions and will never penalize your recitation score.</p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-950 border border-slate-800">
+            <h4 class="font-semibold text-white flex items-center space-x-2">
+              <span class="w-6 h-6 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center text-xs font-bold">2</span>
+              <span>Blind Memorization Practice (Optional)</span>
+            </h4>
+            <p class="text-xs text-slate-400 mt-1">Click the <strong>"Hide Text for Blind Memorization Test"</strong> button. The reference text will be hidden so you can test your memory. As you recite, verified lines will materialize onto the canvas below in real-time!</p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-950 border border-slate-800">
+            <h4 class="font-semibold text-white flex items-center space-x-2">
+              <span class="w-6 h-6 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center text-xs font-bold">3</span>
+              <span>Start Reciting</span>
+            </h4>
+            <p class="text-xs text-slate-400 mt-1">Press <strong>"Begin Recitation"</strong> and allow microphone access. Speak naturally. You do not need to wait for a line to appear before starting the next line—reciting with unbroken breath across verse boundaries is fully supported!</p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-950 border border-slate-800">
+            <h4 class="font-semibold text-white flex items-center space-x-2">
+              <span class="w-6 h-6 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center text-xs font-bold">4</span>
+              <span>Understanding Feedback</span>
+            </h4>
+            <ul class="text-xs text-slate-400 mt-2 space-y-1.5 list-disc list-inside">
+              <li><strong class="text-emerald-400">Green letters:</strong> Pronounced accurately.</li>
+              <li><strong class="text-red-400">Red underline:</strong> Pronunciation error. Hover or click to see what was expected vs heard.</li>
+              <li><strong class="text-amber-400">Yellow underline:</strong> Skipped or omitted syllable.</li>
+              <li><strong class="text-amber-300 font-mono">[⏸️ 1.8s]:</strong> Unusually long hesitation (&gt;1.5 seconds) detected by the Voice Activity Detector.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="pt-2 flex justify-end">
+          <button onclick="closeModal('user-manual-modal')" class="px-5 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 font-semibold text-xs text-white">Got It!</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Footer -->
-  <footer class="border-t border-slate-800 bg-slate-950/80 py-4 text-center text-xs text-slate-500">
-    Project Medhā &copy; 2026 &bull; AIOps Lab Course Project &bull; Fine-tuned on Su-śrotā Sanskrit ASR
+  <footer class="border-t border-slate-800/80 bg-slate-950/80 py-4 text-center text-xs text-slate-500">
+    <p>Project Medhā</p>
   </footer>
 
   <!-- ========================================================== -->
-  <!-- JAVASCRIPT APPLICATION LOGIC -->
+  <!-- FRONTEND SCRIPT LOGIC (ROBUST, CLEAN, INTUITIVE) -->
   <!-- ========================================================== -->
   <script>
-    // Configuration & Dynamic URLs
-    const HOSTNAME = window.location.hostname || 'localhost';
-    const API_URL = `http://${HOSTNAME}:8000`;
-    const WS_URL = `ws://${HOSTNAME}:8000/ws/recite`;
+    const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:8000'
+      : `${window.location.protocol}//${window.location.hostname}:8000`;
 
-    // Application State
-    let isReciting = false;
+    const WS_URL = API_BASE.replace(/^http/, 'ws') + '/ws/recite';
+
     let webSocket = null;
     let audioContext = null;
     let mediaStream = null;
     let scriptProcessor = null;
-    let visualizerAnimId = null;
+    let isReciting = false;
+    let isBlindMode = false;
     let hasMaterializedAny = false;
 
-    // Check backend health on boot
-    async function checkBackend() {
+    // Check Backend Health on load
+    window.addEventListener('DOMContentLoaded', () => {
+      checkBackendHealth();
+      setInterval(checkBackendHealth, 10000);
+    });
+
+    async function checkBackendHealth() {
       const dot = document.getElementById('backend-status-dot');
       const text = document.getElementById('backend-status-text');
+      const badge = document.getElementById('backend-status-badge');
       try {
-        const res = await fetch(`${API_URL}/health`);
+        const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(3000) });
         if (res.ok) {
           const data = await res.json();
-          dot.className = "w-2 h-2 rounded-full bg-emerald-400";
-          text.textContent = `Backend Ready (Vocab: ${data.vocab_size})`;
+          dot.className = "w-2 h-2 rounded-full bg-emerald-500";
+          const servingStatus = data.mlflow_serving?.status === "active" ? " (MLflow Serving)" : "";
+          text.textContent = `Online${servingStatus}`;
+          badge.classList.remove('hidden');
         } else {
-          dot.className = "w-2 h-2 rounded-full bg-red-500";
-          text.textContent = `Backend Error ${res.status}`;
+          throw new Error();
         }
-      } catch (err) {
+      } catch (e) {
         dot.className = "w-2 h-2 rounded-full bg-red-500";
-        text.textContent = "Backend Offline";
+        text.textContent = "Offline";
+        badge.classList.remove('hidden');
       }
+    }
+
+    // Modal Control
+    function openModal(id) {
+      document.getElementById(id).classList.remove('hidden');
+    }
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
     }
 
     // Tab Navigation
     function switchTab(tab) {
-      ['live', 'upload', 'pipeline'].forEach(t => {
+      ['live', 'upload'].forEach(t => {
         const btn = document.getElementById(`tab-btn-${t}`);
         const content = document.getElementById(`tab-content-${t}`);
         if (t === tab) {
@@ -435,7 +441,49 @@ Example:
           content.classList.add('hidden');
         }
       });
-      if (tab === 'pipeline') fetchPrometheusMetrics();
+    }
+
+    // Blind Test Mode Toggle
+    function toggleBlindTest() {
+      isBlindMode = !isBlindMode;
+      const inputWrapper = document.getElementById('verse-input-wrapper');
+      const blindPlaceholder = document.getElementById('blind-placeholder');
+      const blindIcon = document.getElementById('blind-icon');
+      const blindText = document.getElementById('blind-text');
+
+      if (isBlindMode) {
+        inputWrapper.classList.add('hidden');
+        blindPlaceholder.classList.remove('hidden');
+        blindIcon.textContent = "🙈";
+        blindText.textContent = "Show Text (Disable Blind Mode)";
+      } else {
+        inputWrapper.classList.remove('hidden');
+        blindPlaceholder.classList.add('hidden');
+        blindIcon.textContent = "👁️";
+        blindText.textContent = "Hide Text for Blind Memorization Test";
+      }
+    }
+
+    function clearCanvas() {
+      document.getElementById('manuscript-flow').innerHTML = `
+        <span class="text-slate-600 font-sans text-sm italic">
+          Your recitation will stream onto this canvas in real-time as you speak. Pronunciation corrections and cadence badges appear inline automatically.
+        </span>
+      `;
+      document.getElementById('stat-accuracy').textContent = "-- %";
+      document.getElementById('stat-pauses').textContent = "0";
+      document.getElementById('stat-progress').textContent = "0 / 0";
+      document.getElementById('session-summary-box').classList.add('hidden');
+      hasMaterializedAny = false;
+    }
+
+    // Clean non-Devanagari characters from input string
+    function cleanDevanagariInput(text) {
+      if (!text || !/[\u0900-\u097F]/.test(text)) return "";
+      const lines = text.replace(/[^\u0900-\u097F\s]/g, '').split('\n')
+        .map(l => l.replace(/[^\S\r\n]+/g, ' ').trim())
+        .filter(l => l.length > 0 && /[\u0900-\u097F]/.test(l));
+      return lines.join('\n');
     }
 
     // Toggle Recitation (Start / Stop)
@@ -449,45 +497,40 @@ Example:
 
     // Start Live Continuous Recitation
     async function startRecitation() {
-      const rawText = document.getElementById('reference-input').value.trim();
-      if (!rawText) {
-        alert("Please enter or paste your Sanskrit / Prakrit sutra verse text first.");
+      const rawInput = document.getElementById('reference-input').value;
+      const cleanedText = cleanDevanagariInput(rawInput);
+      if (!cleanedText) {
+        alert("Please enter or paste your Sanskrit / Prakrit verse text in Devanagari script.\n(Inputs without Devanagari characters are treated as empty).");
         return;
       }
+      document.getElementById('reference-input').value = cleanedText;
 
-      // Reset state & UI
       hasMaterializedAny = false;
-      const flowContainer = document.getElementById('manuscript-flow');
-      flowContainer.innerHTML = '';
+      document.getElementById('manuscript-flow').innerHTML = '';
       document.getElementById('session-summary-box').classList.add('hidden');
-      document.getElementById('live-hesitation-alert').classList.add('hidden');
 
-      document.getElementById('manuscript-status-badge').className = "px-2.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30 animate-pulse";
-      document.getElementById('manuscript-status-badge').textContent = "Reciting Live";
+      document.getElementById('manuscript-status-badge').className = "px-3 py-1 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30 animate-pulse font-medium";
+      document.getElementById('manuscript-status-badge').textContent = "Listening...";
 
-      // 1. Establish WebSocket Connection
       try {
         webSocket = new WebSocket(WS_URL);
       } catch (e) {
-        alert("Failed to initiate WebSocket connection to backend: " + e.message);
+        alert("Failed to initiate WebSocket connection: " + e.message);
         return;
       }
 
       webSocket.binaryType = "arraybuffer";
 
       webSocket.onopen = async () => {
-        // Send initial handshake
         webSocket.send(JSON.stringify({
           action: "start",
-          reference_text: rawText,
+          reference_text: cleanedText,
           energy_threshold: 0.012,
           max_pause_s: 1.5,
-          line_pause_s: 0.70
+          line_pause_s: 0.45
         }));
 
-        // 2. Initialize Microphone and Audio Stream
         await initMicrophoneStream();
-
         isReciting = true;
         updateUIForRecordingState(true);
       };
@@ -527,8 +570,8 @@ Example:
         const source = audioContext.createMediaStreamSource(mediaStream);
         setupVisualizer(source);
 
-        // 4096 samples at 16kHz = ~256ms chunk
-        scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+        // 2048 buffer reduces latency to ~128ms for responsive speech framing
+        scriptProcessor = audioContext.createScriptProcessor(2048, 1, 1);
         
         scriptProcessor.onaudioprocess = (e) => {
           if (!isReciting || !webSocket || webSocket.readyState !== WebSocket.OPEN) return;
@@ -538,7 +581,6 @@ Example:
             ? inputData 
             : downsampleTo16k(inputData, audioContext.sampleRate);
 
-          // Convert Float32 to Int16 PCM
           const int16 = new Int16Array(pcmFloat.length);
           for (let i = 0; i < pcmFloat.length; i++) {
             let s = Math.max(-1, Math.min(1, pcmFloat[i]));
@@ -556,102 +598,155 @@ Example:
       }
     }
 
-    // Linear downsampler for browser AudioContexts fixed at 44.1k/48k
     function downsampleTo16k(inputData, inputSampleRate) {
+      if (inputSampleRate === 16000) return inputData;
       const ratio = inputSampleRate / 16000;
       const newLength = Math.round(inputData.length / ratio);
       const result = new Float32Array(newLength);
       let offsetResult = 0;
-      let offsetInput = 0;
+      let offsetBuffer = 0;
       while (offsetResult < result.length) {
-        const nextOffsetInput = Math.round((offsetResult + 1) * ratio);
+        const nextOffsetBuffer = Math.round((offsetResult + 1) * ratio);
         let accum = 0, count = 0;
-        for (let i = offsetInput; i < nextOffsetInput && i < inputData.length; i++) {
+        for (let i = offsetBuffer; i < nextOffsetBuffer && i < inputData.length; i++) {
           accum += inputData[i];
           count++;
         }
         result[offsetResult] = count > 0 ? accum / count : 0;
         offsetResult++;
-        offsetInput = nextOffsetInput;
+        offsetBuffer = nextOffsetBuffer;
       }
       return result;
     }
 
-    // Handle incoming events from Backend WebSocket
+    function setupVisualizer(sourceNode) {
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 32;
+      sourceNode.connect(analyser);
+
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      const bars = document.querySelectorAll('#audio-meter span');
+
+      function updateMeter() {
+        if (!isReciting) return;
+        analyser.getByteFrequencyData(dataArray);
+        bars.forEach((bar, idx) => {
+          const val = dataArray[idx % bufferLength] || 10;
+          const h = Math.max(4, Math.round((val / 255) * 28));
+          bar.style.height = `${h}px`;
+        });
+        requestAnimationFrame(updateMeter);
+      }
+      updateMeter();
+    }
+
     function handleWebSocketEvent(data) {
-      if (data.event === 'speech_started') {
-        const badge = document.getElementById('live-indicator-badge');
-        badge.classList.remove('hidden');
-        document.getElementById('live-indicator-text').textContent = 'SPEAKING';
-        document.getElementById('live-hesitation-alert').classList.add('hidden');
-      }
-      else if (data.event === 'long_pause_warning') {
-        const alertBox = document.getElementById('live-hesitation-alert');
-        const alertMsg = document.getElementById('live-hesitation-msg');
-        alertBox.classList.remove('hidden');
-        alertMsg.textContent = `⚠️ Unusually long hesitation pause detected (${data.pause_duration}s)! Keep reciting...`;
-      }
-      else if (data.event === 'chunk_annotated') {
-        renderAnnotatedChunk(data);
-        document.getElementById('live-hesitation-alert').classList.add('hidden');
-        
-        // Update HUD Metrics
-        document.getElementById('hud-accuracy').textContent = `${data.overall_accuracy}%`;
-        document.getElementById('hud-pauses').textContent = `${data.total_long_pauses} Hesitations (>1.5s)`;
-        document.getElementById('hud-progress').textContent = `${data.progress_percentage}% Spoken`;
-      }
-      else if (data.event === 'session_completed') {
-        showFinalSummary(data.summary);
-        stopRecitation();
+      switch (data.event) {
+        case "session_started":
+          if (data.total_lines !== undefined) {
+            document.getElementById('stat-progress').textContent = `0 / ${data.total_lines}`;
+          }
+          break;
+
+        case "speech_started":
+          document.getElementById('manuscript-status-badge').textContent = "Speaking...";
+          document.getElementById('manuscript-status-badge').className = "px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-medium";
+          break;
+
+        case "chunk_annotated":
+          appendAnnotatedChunk(data);
+          break;
+
+        case "session_completed":
+          renderSessionSummary(data.summary);
+          stopRecitation();
+          break;
+
+        case "error":
+          alert("Recitation Server Notice: " + data.message);
+          break;
       }
     }
 
-    // Append and Materialize Annotated Text Tokens into Continuous Flow
-    function renderAnnotatedChunk(chunk) {
+    function appendAnnotatedChunk(data) {
       const flowContainer = document.getElementById('manuscript-flow');
-      hasMaterializedAny = true;
 
-      // Render tokens
-      let chunkHtml = '';
-      (chunk.tokens || []).forEach(tok => {
-        if (tok.type === 'preserve') {
-          // Normal whitespace, newline, or punctuation
-          if (tok.text === '\n') {
-            chunkHtml += '\n';
-          } else {
-            chunkHtml += tok.text;
-          }
-        } else if (tok.type === 'correct') {
-          chunkHtml += `<span class="akshara-correct">${tok.text}</span>`;
-        } else if (tok.type === 'mispronounced') {
-          chunkHtml += `<span class="akshara-mispronounced" title="Expected: '${tok.expected}' | Heard: '${tok.heard}'">${tok.expected}</span>`;
-        } else if (tok.type === 'missing') {
-          chunkHtml += `<span class="akshara-missing" title="Omitted: '${tok.expected}'">${tok.expected}</span>`;
-        } else if (tok.type === 'extra') {
-          chunkHtml += `<span class="akshara-extra" title="Extra sound: '${tok.heard}'">(+${tok.heard})</span>`;
+      if (!hasMaterializedAny) {
+        flowContainer.innerHTML = '';
+        hasMaterializedAny = true;
+      }
+
+      const chunkSpan = document.createElement('span');
+      chunkSpan.className = "inline";
+
+      data.tokens.forEach(tok => {
+        const span = document.createElement('span');
+
+        if (tok.type === "pause_badge") {
+          span.className = "font-mono text-xs px-2 py-0.5 mx-1.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 inline-block align-middle";
+          span.textContent = tok.text;
+          span.title = `Hesitation pause: ${tok.duration_s}s`;
+        } else if (tok.type === "correct") {
+          span.className = "akshara-correct";
+          span.textContent = tok.text;
+        } else if (tok.type === "mispronounced") {
+          span.className = "akshara-mispronounced";
+          span.textContent = tok.text;
+          span.title = `Expected: "${tok.expected}" | Heard: "${tok.heard}"`;
+        } else if (tok.type === "missing") {
+          span.className = "akshara-missing";
+          span.textContent = tok.text;
+          span.title = `Skipped: "${tok.expected}"`;
+        } else if (tok.type === "extra") {
+          span.className = "akshara-extra";
+          span.textContent = tok.heard;
+          span.title = `Added sound: "${tok.heard}"`;
+        } else {
+          span.textContent = tok.text;
         }
+
+        chunkSpan.appendChild(span);
       });
 
-      // If this utterance was followed by an unnatural hesitation pause (>1.5s), insert inline badge
-      if (chunk.is_long_pause) {
-        chunkHtml += ` <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-500/20 text-red-400 border border-red-500/30 mx-1 align-middle" title="Unnatural hesitation pause (${chunk.pause_duration}s)">⏸️ ${chunk.pause_duration}s</span> `;
+      flowContainer.appendChild(chunkSpan);
+
+      // Update HUD Metrics
+      const acc = data.overall_accuracy ?? data.accuracy_percentage;
+      if (acc !== undefined) {
+        document.getElementById('stat-accuracy').textContent = `${acc}%`;
       }
-
-      flowContainer.innerHTML += chunkHtml;
-
-      // Auto-scroll to end of recitation flow
-      flowContainer.scrollTop = flowContainer.scrollHeight;
+      const pauses = data.total_hesitations ?? data.total_long_pauses ?? data.hesitation_count;
+      if (pauses !== undefined) {
+        document.getElementById('stat-pauses').textContent = pauses;
+      }
+      const linesCompleted = data.lines_completed ?? data.line_index ?? 0;
+      const totalLines = data.total_lines ?? 0;
+      if (totalLines > 0) {
+        document.getElementById('stat-progress').textContent = `${linesCompleted} / ${totalLines}`;
+      }
     }
 
-    // Stop Recitation
+    function renderSessionSummary(summary) {
+      if (!summary) return;
+      const box = document.getElementById('session-summary-box');
+      const text = document.getElementById('session-summary-text');
+      box.classList.remove('hidden');
+
+      const lines = summary.lines_completed ?? summary.total_chunks ?? 0;
+      const acc = summary.accuracy_percentage ?? summary.overall_accuracy ?? 100;
+      const pauses = summary.hesitation_count ?? summary.total_hesitations ?? summary.total_long_pauses ?? 0;
+
+      text.innerHTML = `
+        Completed <strong>${lines}</strong> lines with 
+        <strong>${acc}%</strong> overall pronunciation accuracy and 
+        <strong>${pauses}</strong> cadence hesitations.
+      `;
+    }
+
     function stopRecitation() {
       isReciting = false;
       updateUIForRecordingState(false);
-
-      if (webSocket && webSocket.readyState === WebSocket.OPEN) {
-        try { webSocket.send(JSON.stringify({ action: "stop" })); } catch (e) {}
-        setTimeout(() => { webSocket.close(); }, 300);
-      }
 
       if (scriptProcessor) {
         scriptProcessor.disconnect();
@@ -663,207 +758,106 @@ Example:
       }
       if (audioContext && audioContext.state !== 'closed') {
         audioContext.close();
+        audioContext = null;
       }
 
-      document.getElementById('live-indicator-badge').classList.add('hidden');
-      document.getElementById('live-hesitation-alert').classList.add('hidden');
-      document.getElementById('manuscript-status-badge').className = "px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400";
+      if (webSocket && webSocket.readyState === WebSocket.OPEN) {
+        webSocket.send(JSON.stringify({ action: "stop" }));
+        webSocket.close();
+      }
+      webSocket = null;
+
+      document.getElementById('manuscript-status-badge').className = "px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-medium";
       document.getElementById('manuscript-status-badge').textContent = "Completed";
+      document.getElementById('live-hesitation-alert').classList.add('hidden');
     }
 
-    // UI State Switcher
     function updateUIForRecordingState(recording) {
-      const btn = document.getElementById('btn-start-recite');
+      const btn = document.getElementById('recite-toggle-btn');
       const icon = document.getElementById('recite-btn-icon');
-      const label = document.getElementById('recite-btn-label');
-      const textInput = document.getElementById('reference-input');
+      const text = document.getElementById('recite-btn-text');
+      const meter = document.getElementById('audio-meter');
 
       if (recording) {
-        btn.className = "px-6 py-2.5 rounded-xl font-bold text-sm bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/30 transition flex items-center space-x-2 animate-pulse";
+        btn.className = "flex-1 sm:flex-initial px-6 py-3.5 rounded-xl font-bold text-sm tracking-wide transition flex items-center justify-center space-x-3 bg-red-600 hover:bg-red-700 text-white recording-glow";
         icon.textContent = "⏹️";
-        label.textContent = "Finish Recitation";
-        textInput.disabled = true;
+        text.textContent = "Finish Recitation";
+        meter.classList.remove('hidden');
       } else {
-        btn.className = "px-6 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 text-white shadow-lg shadow-orange-500/25 transition flex items-center space-x-2";
+        btn.className = "flex-1 sm:flex-initial px-6 py-3.5 rounded-xl font-bold text-sm tracking-wide transition flex items-center justify-center space-x-3 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-lg shadow-orange-500/20";
         icon.textContent = "🎙️";
-        label.textContent = "Start Continuous Recitation";
-        textInput.disabled = false;
+        text.textContent = "Begin Recitation";
+        meter.classList.add('hidden');
       }
     }
 
-    // Show Session Evaluation Summary
-    function showFinalSummary(summary) {
-      if (!summary) return;
-      const box = document.getElementById('session-summary-box');
-      box.classList.remove('hidden');
-
-      const accElem = document.getElementById('summary-accuracy');
-      const pauseElem = document.getElementById('summary-pauses-count');
-      const avgPauseElem = document.getElementById('summary-avg-pause');
-      const gradeElem = document.getElementById('summary-grade-badge');
-
-      accElem.textContent = `${summary.overall_accuracy}%`;
-      pauseElem.textContent = `${summary.total_long_pauses}`;
-      avgPauseElem.textContent = `${summary.average_pause_seconds}s`;
-
-      if (summary.overall_accuracy >= 85 && summary.total_long_pauses === 0) {
-        gradeElem.textContent = "उत्कृष्ट (Flawless Master)";
-        gradeElem.className = "text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
-      } else if (summary.overall_accuracy >= 70) {
-        gradeElem.textContent = "उत्तम (Good Recitation)";
-        gradeElem.className = "text-xs px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30";
-      } else {
-        gradeElem.textContent = "पुनः अभ्यासं कुरु (Needs Practice)";
-        gradeElem.className = "text-xs px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/30";
-      }
-
-      box.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
-    // Reset Session
-    function resetSession() {
-      stopRecitation();
-      document.getElementById('reference-input').value = '';
-      document.getElementById('manuscript-flow').innerHTML = '<span class="text-base text-slate-500 italic font-sans">Your recitation will stream and appear here continuously. Click "Start Continuous Recitation" and speak at your natural cadence.</span>';
-      document.getElementById('session-summary-box').classList.add('hidden');
-      document.getElementById('hud-accuracy').textContent = '100.0%';
-      document.getElementById('hud-pauses').textContent = '0 Long Pauses (>1.5s)';
-      document.getElementById('hud-progress').textContent = '0% Spoken';
-    }
-
-    // Visualizer Setup
-    function setupVisualizer(sourceNode) {
-      const canvas = document.getElementById('mic-visualizer');
-      const ctx = canvas.getContext('2d');
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 64;
-      sourceNode.connect(analyser);
-
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-
-      function draw() {
-        if (!isReciting) {
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          return;
-        }
-        visualizerAnimId = requestAnimationFrame(draw);
-        analyser.getByteFrequencyData(dataArray);
-
-        ctx.fillStyle = '#020617';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        const barWidth = (canvas.width / bufferLength) * 2;
-        let x = 0;
-
-        for (let i = 0; i < bufferLength; i++) {
-          const barHeight = (dataArray[i] / 255) * canvas.height;
-          ctx.fillStyle = `rgb(${Math.min(255, 180 + barHeight * 2)}, ${Math.max(80, 160 - barHeight)}, 30)`;
-          ctx.fillRect(x, canvas.height - barHeight, barWidth - 1, barHeight);
-          x += barWidth;
-        }
-      }
-      draw();
-    }
-
-    // =========================================================
-    // TAB 2: REST Offline Audio File Upload
-    // =========================================================
-    async function analyzeUploadedFile() {
+    // Audio File Upload Handler (Tab 2)
+    async function handleAudioUpload(e) {
+      e.preventDefault();
       const fileInput = document.getElementById('upload-audio-file');
-      const refText = document.getElementById('upload-ref-text').value.trim();
-      const btn = document.getElementById('btn-upload-analyze');
-      const resultsBox = document.getElementById('upload-results-box');
+      const refTextInput = document.getElementById('upload-ref-text');
+      const submitBtn = document.getElementById('upload-submit-btn');
 
-      if (!fileInput.files || fileInput.files.length === 0) {
-        alert("Please select an audio file first (.wav, .mp3, etc.).");
+      if (!fileInput.files[0] || !refTextInput.value.trim()) {
+        alert("Please select an audio file and enter the expected text.");
         return;
       }
 
-      btn.disabled = true;
-      btn.innerHTML = `<span class="animate-spin mr-2">⏳</span> Analyzing Audio with Quantized Sushrota...`;
+      const cleaned = cleanDevanagariInput(refTextInput.value);
+      if (!cleaned) {
+        alert("Please enter reference text containing valid Sanskrit or Prakrit in Devanagari script.");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<span>Analyzing with model...</span>`;
 
       const formData = new FormData();
-      formData.append('file', fileInput.files[0]);
-      formData.append('reference_text', refText);
+      formData.append("file", fileInput.files[0]);
+      formData.append("reference_text", cleaned);
 
       try {
-        const res = await fetch(`${API_URL}/api/v1/analyze`, {
-          method: 'POST',
+        const res = await fetch(`${API_BASE}/api/v1/analyze`, {
+          method: "POST",
           body: formData
         });
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-
         const data = await res.json();
-        resultsBox.classList.remove('hidden');
 
-        document.getElementById('upload-score').textContent = `${data.similarity_score}%`;
-        document.getElementById('upload-latency').textContent = `Inference Latency: ${data.latency_seconds}s`;
-        document.getElementById('upload-transcription').textContent = `"${data.transcription}"`;
+        if (res.ok && data.status === "success") {
+          document.getElementById('upload-result').classList.remove('hidden');
+          document.getElementById('upload-similarity').textContent = `Match Accuracy: ${data.similarity_score}%`;
+          
+          const diffContainer = document.getElementById('upload-diff');
+          diffContainer.innerHTML = '';
 
-        // Format diff tokens
-        const diffCont = document.getElementById('upload-diff-tokens');
-        let diffHtml = '';
-        (data.diff_tokens || []).forEach(tok => {
-          if (tok.type === 'preserve') {
-            diffHtml += tok.text === '\n' ? '<br>' : tok.text;
-          } else if (tok.type === 'correct') {
-            diffHtml += `<span class="akshara-correct">${tok.text}</span>`;
-          } else if (tok.type === 'mispronounced') {
-            diffHtml += `<span class="akshara-mispronounced" title="Expected: ${tok.expected} | Heard: ${tok.heard}">${tok.expected}</span>`;
-          } else if (tok.type === 'missing') {
-            diffHtml += `<span class="akshara-missing" title="Omitted: ${tok.expected}">${tok.expected}</span>`;
-          } else if (tok.type === 'extra') {
-            diffHtml += `<span class="akshara-extra" title="Extra sound: ${tok.heard}">(+${tok.heard})</span>`;
-          }
-        });
-        diffCont.innerHTML = diffHtml || data.reference_text;
-
-        // Pauses list
-        const pauseCont = document.getElementById('upload-pauses-list');
-        pauseCont.innerHTML = '';
-        if (data.long_pauses && data.long_pauses.length > 0) {
-          data.long_pauses.forEach(p => {
-            pauseCont.innerHTML += `<div class="p-1.5 bg-red-500/10 text-red-300 rounded border border-red-500/20">⚠️ Pause at ${p.after_second}s (Duration: ${p.pause_duration_seconds}s)</div>`;
+          data.diff_tokens.forEach(tok => {
+            const span = document.createElement('span');
+            if (tok.type === "correct") {
+              span.className = "akshara-correct";
+              span.textContent = tok.text;
+            } else if (tok.type === "mispronounced") {
+              span.className = "akshara-mispronounced";
+              span.textContent = tok.text;
+              span.title = `Expected: "${tok.expected}" | Heard: "${tok.heard}"`;
+            } else if (tok.type === "missing") {
+              span.className = "akshara-missing";
+              span.textContent = tok.text;
+              span.title = `Skipped: "${tok.expected}"`;
+            } else {
+              span.textContent = tok.text;
+            }
+            diffContainer.appendChild(span);
           });
         } else {
-          pauseCont.innerHTML = `<div class="text-emerald-400">✅ No unnatural pauses detected (>1.5s). Rhythm is smooth!</div>`;
+          alert("Analysis error: " + (data.detail || "Failed to analyze"));
         }
-
       } catch (err) {
-        alert("Offline Analysis Failed: " + err.message);
+        alert("Network error: " + err.message);
       } finally {
-        btn.disabled = false;
-        btn.innerHTML = `<span>🔍 Run Offline REST Analysis</span>`;
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<span>Analyze Recording</span>`;
       }
     }
-
-    // =========================================================
-    // TAB 3: Prometheus Metrics Fetcher
-    // =========================================================
-    async function fetchPrometheusMetrics() {
-      const dump = document.getElementById('metrics-dump');
-      dump.textContent = "Fetching live Prometheus exporter metrics from backend...";
-      try {
-        const res = await fetch(`${API_URL}/metrics`);
-        if (res.ok) {
-          const text = await res.text();
-          const lines = text.split('\n').filter(l => !l.startsWith('#') && l.trim().length > 0);
-          dump.textContent = lines.join('\n');
-        } else {
-          dump.textContent = `Failed to fetch metrics: HTTP ${res.status}`;
-        }
-      } catch (err) {
-        dump.textContent = `Could not connect to /metrics: ${err.message}`;
-      }
-    }
-
-    // Initialize application on page load
-    window.addEventListener('DOMContentLoaded', () => {
-      checkBackend();
-      setInterval(checkBackend, 15000);
-    });
   </script>
 </body>
 </html>

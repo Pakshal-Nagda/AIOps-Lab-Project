@@ -55,9 +55,6 @@
         <a href="index.html" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
           ← Back to Verifier
         </a>
-        <button onclick="toggleAdminModal()" class="px-3 py-1.5 rounded-lg bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500/30 transition">
-          ⚙️ Manage Prompts
-        </button>
       </div>
     </div>
   </header>
@@ -71,7 +68,7 @@
         <span class="text-2xl">👤</span>
         <div>
           <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Speaker / Contributor Name:</label>
-          <input type="text" id="speaker-name-input" placeholder="e.g. Pakshal" onchange="saveSpeakerName()" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-sm text-white focus:ring-2 focus:ring-orange-500 focus:outline-none w-48 font-medium">
+          <input type="text" id="speaker-name-input" placeholder="Enter your name here" onchange="saveSpeakerName()" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-sm text-white focus:ring-2 focus:ring-orange-500 focus:outline-none w-52 font-medium">
         </div>
       </div>
 
@@ -184,28 +181,6 @@
     </div>
 
   </main>
-
-  <!-- Admin Modal: Update Prompts List -->
-  <div id="admin-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full p-6 space-y-4 shadow-2xl">
-      <div class="flex items-center justify-between pb-2 border-b border-slate-800">
-        <h3 class="text-base font-bold text-white">⚙️ Configure Prompts to Record</h3>
-        <button onclick="toggleAdminModal()" class="text-slate-400 hover:text-white text-lg">&times;</button>
-      </div>
-      <p class="text-xs text-slate-400">Paste your Sanskrit/Prakrit sutra verses below (one line per prompt). Each line will be shown to speakers as a separate 2-10s recording card:</p>
-      
-      <textarea id="admin-prompts-input" rows="8" placeholder="णमो अरिहंताणं
-णमो सिद्धाणं
-णमो आयरियाणं
-णमो उवज्झायाणं
-णमो लोए सव्वसाहूणं" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-base font-devanagari text-amber-100 focus:ring-2 focus:ring-orange-500 focus:outline-none leading-relaxed"></textarea>
-
-      <div class="flex items-center justify-end space-x-3 pt-2">
-        <button onclick="toggleAdminModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-semibold transition">Cancel</button>
-        <button onclick="saveAdminPrompts()" class="px-5 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-xs text-white font-bold shadow transition">Save Prompts</button>
-      </div>
-    </div>
-  </div>
 
   <!-- Footer -->
   <footer class="border-t border-slate-800 bg-slate-950/80 py-4 text-center text-xs text-slate-500">
@@ -459,34 +434,6 @@
           document.getElementById('stat-speakers-count').textContent = Object.keys(data.speakers || {}).length;
         }
       } catch (e) {}
-    }
-
-    // Admin Modal
-    function toggleAdminModal() {
-      const modal = document.getElementById('admin-modal');
-      modal.classList.toggle('hidden');
-      if (!modal.classList.contains('hidden')) {
-        document.getElementById('admin-prompts-input').value = prompts.map(p => p.text).join('\n');
-      }
-    }
-
-    async function saveAdminPrompts() {
-      const rawText = document.getElementById('admin-prompts-input').value.trim();
-      if (!rawText) return;
-      try {
-        const res = await fetch(`${API_URL}/api/v1/collector/prompts`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ raw_text: rawText })
-        });
-        if (res.ok) {
-          await fetchPrompts();
-          toggleAdminModal();
-          alert("Prompts updated successfully!");
-        }
-      } catch (e) {
-        alert("Failed to update prompts: " + e.message);
-      }
     }
   </script>
 </body>

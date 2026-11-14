@@ -113,13 +113,16 @@ All 24 test cases below are implemented in `tests/test_recitation_engine.py` and
 | :--- | :--- | :--- | :--- | :--- |
 | **TC-21** | `test_analyze_recitation_api` | `POST /api/v1/analyze` | Multipart form with processed speech WAV clip and matching reference text | HTTP 200, returns transcription, similarity score, discrepancy list, diff tokens, and latency. |
 | **TC-22** | `test_analyze_recitation_missing_reference` | `POST /api/v1/analyze` | Multipart form with audio clip but missing required `reference_text` parameter | HTTP 422 Unprocessable Entity. |
+| **TC-23** | `test_analyze_recitation_non_devanagari_text` | `POST /api/v1/analyze` | Multipart form with non-Devanagari English text | HTTP 400 Bad Request with detail indicating no Devanagari characters. |
 
-### Tier 10: Ray Distributed Data Cleaning Unit Tests
+### Tier 10: Unicode Input Cleaning & Ray Distributed Data Prep Tests
 
 | Test ID | Test Name | Target Component | Input Specification | Expected Outcome |
 | :--- | :--- | :--- | :--- | :--- |
-| **TC-23** | `test_ray_devanagari_text_cleaning` | `clean_devanagari_text` | Devanagari text with dashes and danda markers (`।`, `॥`) | Strips punctuation, normalizes Unicode NFC, returns clean text and `is_valid=True`. |
-| **TC-24** | `test_ray_devanagari_empty_or_non_indic` | `clean_devanagari_text` | Whitespace-only string and non-Indic ASCII English text | Flags invalid with reasons `"empty_text"` and `"no_devanagari_characters"`. |
+| **TC-24** | `test_clean_devanagari_input_valid` | `clean_devanagari_input` | Text with English verse numbers and brackets | Strips ASCII brackets/numbers while preserving Devanagari lines. |
+| **TC-25** | `test_clean_devanagari_input_non_indic_treated_empty` | `clean_devanagari_input` | English letters, ASCII symbols, or whitespace | Returns empty string `""`. |
+| **TC-26** | `test_ray_devanagari_text_cleaning` | `clean_devanagari_text` | Devanagari text with dashes and danda markers (`।`, `॥`) | Strips punctuation, normalizes Unicode NFC, returns clean text and `is_valid=True`. |
+| **TC-27** | `test_ray_devanagari_empty_or_non_indic` | `clean_devanagari_text` | Whitespace-only string and non-Indic ASCII English text | Flags invalid with reasons `"empty_text"` and `"no_devanagari_characters"`. |
 
 ---
 
