@@ -139,10 +139,10 @@ class StreamingVAD:
                             "is_long_pause": is_long
                         })
 
-                        # Reset buffer for next utterance
-                        self.speech_buffer = []
-                        self.total_speech_samples = 0
-                        self.is_speaking = False
+                    # Reset buffer for next utterance (regardless of whether discarded as noise blip)
+                    self.speech_buffer = []
+                    self.total_speech_samples = 0
+                    self.is_speaking = False
             else:
                 # Silence between lines or before recitation starts
                 if not self.long_pause_emitted and self.inter_line_silence_samples >= self.max_allowed_pause_samples:

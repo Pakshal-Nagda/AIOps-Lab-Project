@@ -1,3 +1,9 @@
+import os
+import sys
+
+# Ensure root directory is always on python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import pytest
 import numpy as np
 from fastapi.testclient import TestClient
@@ -63,6 +69,12 @@ def test_space_agnostic_pronunciation_mistake():
     assert len(missing_tok) == 1
     assert missing_tok[0]["expected"] == "ि"
 
+def test_space_agnostic_alignment_empty():
+    tokens, correct, total = space_agnostic_align("", "")
+    assert tokens == []
+    assert correct == 0
+    assert total == 0
+
 # -------------------------------------------------------------
 # 3. Streaming VAD Unit Tests
 # -------------------------------------------------------------
@@ -103,6 +115,23 @@ def test_streaming_vad_hesitation_warning():
     pause_warnings = [e for e in events if e["event"] == "long_pause_warning"]
     assert len(pause_warnings) == 1
     assert pause_warnings[0]["pause_duration"] >= 1.0
+
+def test_streaming_vad_short_blip_ignored():
+    vad = StreamingVAD(
+        sample_rate=16000,
+        energy_threshold=0.01,
+        min_speech_duration_s=0.2,
+        line_pause_s=0.5
+    )
+    # 50ms short click/noise (below min_speech_duration_s=0.2)
+    short_click = np.random.uniform(-0.1, 0.1, int(16000 * 0.05)).astype(np.float32)
+    vad.feed_chunk(short_click)
+    # Follow with 0.6s silence to trigger line boundary check
+    silence = np.zeros(int(16000 * 0.6), dtype=np.float32)
+    events = vad.feed_chunk(silence)
+    # line_boundary should NOT be emitted because speech was < 200ms
+    assert not any(e["event"] == "line_boundary" for e in events)
+    assert vad.is_speaking is False
 
 # -------------------------------------------------------------
 # 4. ContinuousSutraAligner Progression & Inline Pause Tests
@@ -209,7 +238,10 @@ def test_websocket_recite_flow():
 # -------------------------------------------------------------
 # 5. Model Evaluation & Error Metric Unit Tests
 # -------------------------------------------------------------
-from tests.evaluate import compute_wer, compute_cer, evaluate_model
+try:
+    from tests.evaluate import compute_wer, compute_cer, evaluate_model
+except ModuleNotFoundError:
+    from evaluate import compute_wer, compute_cer, evaluate_model
 
 def test_evaluation_error_metrics():
     ref = "णमो अरिहंताणं णमो सिद्धाणं"
@@ -238,3 +270,92 @@ def test_evaluate_model_integration():
     assert "val_char_accuracy" in metrics
     assert metrics["val_char_accuracy"] > 50.0
     assert metrics["eval_samples"] == 11
+
+# -------------------------------------------------------------
+# 6. REST API & Data Collector Endpoint Tests
+# -------------------------------------------------------------
+def test_collector_prompts_api():
+    res = client.get("/api/v1/collector/prompts")
+    assert res.status_code == 200
+    data = res.json()
+    assert "prompts" in data
+    assert len(data["prompts"]) > 0
+
+def test_collector_update_prompts_api():
+    payload = {"raw_text": "णमो अरिहंताणं\nणमो सिद्धाणं\nणमो आयरियाणं"}
+    res = client.post("/api/v1/collector/prompts", json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "success"
+    assert data["total_prompts"] == 3
+
+def test_collector_stats_api():
+    res = client.get("/api/v1/collector/stats")
+    assert res.status_code == 200
+    data = res.json()
+    assert "total_clips" in data
+
+def test_collector_audio_upload_flow():
+    import io
+    import soundfile as sf
+    bio = io.BytesIO()
+    # Generate 1 sec dummy 16kHz sine wave audio
+    dummy = (np.sin(np.linspace(0, 10, 16000)) * 10000).astype(np.int16)
+    sf.write(bio, dummy, 16000, format="WAV", subtype="PCM_16")
+    bio.seek(0)
+
+    files = {"file": ("test_clip.wav", bio.getvalue(), "audio/wav")}
+    data = {
+        "text": "णमो अरिहंताणं",
+        "speaker": "PyTestUser",
+        "prompt_id": 1
+    }
+    res = client.post("/api/v1/collector/upload", files=files, data=data)
+    assert res.status_code == 200
+    resp_data = res.json()
+    assert resp_data["status"] == "success"
+    assert "filename" in resp_data
+
+def test_analyze_recitation_api():
+    sample_wav = "data/processed_audio/clip_1794387514520_Sweta_p23.wav"
+    with open(sample_wav, "rb") as f:
+        files = {"file": ("clip.wav", f.read(), "audio/wav")}
+    data = {"reference_text": "खामेमि सव्व जीवे सव्वे जीवा खमंतु मे"}
+    res = client.post("/api/v1/analyze", files=files, data=data)
+    assert res.status_code == 200
+    resp = res.json()
+    assert resp["status"] == "success"
+    assert "transcription" in resp
+    assert "similarity_score" in resp
+    assert "discrepancies" in resp
+    assert "diff_tokens" in resp
+
+def test_analyze_recitation_missing_reference():
+    sample_wav = "data/processed_audio/clip_1794387514520_Sweta_p23.wav"
+    with open(sample_wav, "rb") as f:
+        files = {"file": ("clip.wav", f.read(), "audio/wav")}
+    res = client.post("/api/v1/analyze", files=files)
+    assert res.status_code == 422
+
+# -------------------------------------------------------------
+# 7. Ray Data Cleaning Logic Unit Tests
+# -------------------------------------------------------------
+from scripts.prepare_dataset import clean_devanagari_text
+
+def test_ray_devanagari_text_cleaning():
+    raw_sutra = "  उवसग्गहरं पासं।  पासं वंदामि -- कम्मघणमुक्कं॥  "
+    cleaned, is_valid, reason = clean_devanagari_text(raw_sutra)
+    assert is_valid is True
+    assert "।" not in cleaned
+    assert "॥" not in cleaned
+    assert "--" not in cleaned
+    assert cleaned == "उवसग्गहरं पासं पासं वंदामि कम्मघणमुक्कं"
+
+def test_ray_devanagari_empty_or_non_indic():
+    _, is_valid, reason = clean_devanagari_text("   \n\t   ")
+    assert is_valid is False
+    assert reason == "empty_text"
+
+    _, is_valid, reason = clean_devanagari_text("Hello World 12345")
+    assert is_valid is False
+    assert reason == "no_devanagari_characters"
