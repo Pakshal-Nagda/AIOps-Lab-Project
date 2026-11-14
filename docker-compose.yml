@@ -6,6 +6,8 @@ services:
     volumes:
       - ./models:/app/models
       - ./data:/app/data
+      - ./src:/app/src
+      - ./backend:/app/backend
     ports:
       - "8000:8000"
     extra_hosts:
@@ -33,3 +35,17 @@ services:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
     depends_on:
       - backend
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./monitoring/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+      - ./monitoring/dashboard.yml:/etc/grafana/provisioning/dashboards/dashboard.yml
+      - ./monitoring/:/var/lib/grafana/dashboards/
+    depends_on:
+      - prometheus
