@@ -331,8 +331,8 @@ class ContinuousSutraAligner:
         self.verifier = verifier
         self.max_pause_s = max_pause_s
         self.orig_text = clean_devanagari_input(reference_text)
-        ref_lines = [l for l in self.orig_text.splitlines() if l.strip()]
-        self.total_lines = len(ref_lines) if ref_lines else (1 if self.orig_text else 0)
+        self.ref_lines = [l for l in self.orig_text.splitlines() if l.strip()]
+        self.total_lines = len(self.ref_lines) if self.ref_lines else (1 if self.orig_text else 0)
 
         # Build clean phonetic representation and index map
         self.clean_ref: List[str] = []
@@ -347,11 +347,43 @@ class ContinuousSutraAligner:
         self.cursor_orig_idx = 0
         self.total_phonetic_chars = len(self.clean_ref)
 
+        # Precompute the phonetic boundary (cumulative clean char count) for each input line
+        self.line_phonetic_ends: List[int] = []
+        cum_phonetic = 0
+        for line in self.ref_lines:
+            line_phonetic_count = sum(1 for c in line if c not in NON_PHONETIC_CHARS)
+            cum_phonetic += line_phonetic_count
+            self.line_phonetic_ends.append(cum_phonetic)
+
         self.total_correct_chars = 0
         self.total_processed_chars = 0
         self.all_pauses: List[float] = []
         self.long_pauses: List[float] = []
         self.annotated_chunks: List[Dict] = []
+
+    def compute_lines_completed(self) -> int:
+        """
+        Computes how many actual lines from the input reference text have been completed
+        based on the phonetic character coverage of each input line, rather than pause counts.
+        """
+        if not self.line_phonetic_ends or self.total_lines == 0:
+            return 0
+        if self.cursor_clean_idx >= self.total_phonetic_chars:
+            return self.total_lines
+
+        completed_count = 0
+        prev_end = 0
+        for end in self.line_phonetic_ends:
+            length = end - prev_end
+            # Allow 1-character tolerance for natural ASR ending elisions (e.g., visarga/virama) on lines with >= 4 chars
+            tolerance = 1 if length >= 4 else 0
+            threshold = end - tolerance
+            if self.cursor_clean_idx >= threshold:
+                completed_count += 1
+            else:
+                break
+            prev_end = end
+        return min(self.total_lines, completed_count)
 
     def process_utterance(self, audio_data: np.ndarray, pause_duration: float = 0.0) -> Optional[Dict]:
         """
@@ -428,7 +460,7 @@ class ContinuousSutraAligner:
             1
         )
 
-        lines_done = min(self.total_lines, len(self.annotated_chunks) + 1)
+        lines_done = self.compute_lines_completed()
         chunk_result = {
             "transcription": transcription,
             "tokens": tokens,
@@ -456,7 +488,7 @@ class ContinuousSutraAligner:
             1
         )
         avg_pause = round(sum(self.all_pauses) / len(self.all_pauses), 2) if self.all_pauses else 0.0
-        lines_done = min(self.total_lines, len(self.annotated_chunks))
+        lines_done = self.compute_lines_completed()
 
         return {
             "overall_accuracy": overall_acc,

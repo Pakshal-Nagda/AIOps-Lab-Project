@@ -733,7 +733,7 @@
       const text = document.getElementById('session-summary-text');
       box.classList.remove('hidden');
 
-      const lines = summary.lines_completed ?? summary.total_chunks ?? 0;
+      const lines = summary.lines_completed !== undefined ? summary.lines_completed : 0;
       const acc = summary.accuracy_percentage ?? summary.overall_accuracy ?? 100;
       const pauses = summary.hesitation_count ?? summary.total_hesitations ?? summary.total_long_pauses ?? 0;
 

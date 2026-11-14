@@ -30,11 +30,26 @@ app.add_middleware(
 # ==========================================
 # Prometheus Metrics Instrumentation
 # ==========================================
-REQUEST_COUNT = Counter('api_requests_total', 'Total HTTP API requests', ['endpoint'])
+REQUEST_COUNT = Counter('api_requests', 'Total HTTP API requests', ['endpoint'])
 INFERENCE_TIME = Histogram('inference_duration_seconds', 'Time spent running ASR inference and VAD')
-LIVE_SESSIONS_COUNT = Counter('live_recitation_sessions_total', 'Total live WebSocket recitation sessions started')
-LIVE_LINES_COUNT = Counter('live_lines_verified_total', 'Total individual sutra lines verified live')
+LIVE_SESSIONS_COUNT = Counter('live_recitation_sessions', 'Total live WebSocket recitation sessions started')
+LIVE_LINES_COUNT = Counter('live_lines_verified', 'Total individual sutra lines verified live')
 ACTIVE_WEBSOCKETS = Gauge('active_websocket_connections', 'Current active live recitation WebSocket sessions')
+RECITATION_ACCURACY = Histogram('recitation_accuracy_percentage', 'Distribution of recitation pronunciation accuracy percentage', buckets=[0, 25, 50, 60, 70, 75, 80, 85, 90, 95, 100])
+CADENCE_HESITATIONS = Counter('cadence_hesitations', 'Total recitation pauses exceeding hesitation threshold')
+
+# Automatic middleware to track all incoming HTTP requests in Prometheus
+@app.middleware("http")
+async def track_api_requests(request, call_next):
+    endpoint = request.url.path
+    response = await call_next(request)
+    if endpoint != "/metrics":
+        REQUEST_COUNT.labels(endpoint=endpoint).inc()
+    return response
+
+# Pre-initialize metric series with 0 so Prometheus exports them immediately
+for _ep in ["/health", "/api/v1/analyze", "/ws/recite", "/api/v1/collector/prompts", "/api/v1/collector/upload", "/api/v1/collector/stats"]:
+    REQUEST_COUNT.labels(endpoint=_ep).inc(0)
 
 # Load the model into memory once when server boots
 print("Initializing Sushrota ASR Engine...")
@@ -79,7 +94,6 @@ async def analyze_recitation(
     Standard REST endpoint for batch audio file recitation verification.
     Accepts audio file (WAV/MP3/OGG) and expected Sanskrit/Prakrit reference text.
     """
-    REQUEST_COUNT.labels(endpoint='/api/v1/analyze').inc()
     start_time = time.time()
 
     cleaned_ref = clean_devanagari_input(reference_text)
@@ -105,6 +119,9 @@ async def analyze_recitation(
         
         duration = time.time() - start_time
         INFERENCE_TIME.observe(duration)
+        RECITATION_ACCURACY.observe(comparison["match_accuracy_percentage"])
+        if pauses:
+            CADENCE_HESITATIONS.inc(len(pauses))
         
         return {
             "status": "success",
@@ -331,6 +348,7 @@ async def websocket_recite_endpoint(websocket: WebSocket):
     await websocket.accept()
     ACTIVE_WEBSOCKETS.inc()
     LIVE_SESSIONS_COUNT.inc()
+    REQUEST_COUNT.labels(endpoint='/ws/recite').inc()
 
     session: ContinuousSutraAligner = None
     vad: StreamingVAD = None
@@ -383,10 +401,13 @@ async def websocket_recite_endpoint(websocket: WebSocket):
                         residual_audio = vad.flush()
                         if residual_audio is not None and len(residual_audio) > 3200:
                             t0 = time.time()
+                            prev_done = session.compute_lines_completed()
                             chunk_res = session.process_utterance(residual_audio, pause_duration=0.0)
                             if chunk_res:
                                 INFERENCE_TIME.observe(time.time() - t0)
-                                LIVE_LINES_COUNT.inc()
+                                new_done = chunk_res.get("lines_completed", 0)
+                                if new_done > prev_done:
+                                    LIVE_LINES_COUNT.inc(new_done - prev_done)
                                 await websocket.send_json({
                                     "event": "chunk_annotated",
                                     **chunk_res
@@ -427,10 +448,16 @@ async def websocket_recite_endpoint(websocket: WebSocket):
 
                         # Run ASR inference and pronunciation verification
                         t0 = time.time()
+                        prev_done = session.compute_lines_completed()
                         chunk_res = session.process_utterance(audio_segment, pause_duration=pause_duration)
                         if chunk_res:
                             INFERENCE_TIME.observe(time.time() - t0)
-                            LIVE_LINES_COUNT.inc()
+                            new_done = chunk_res.get("lines_completed", 0)
+                            if new_done > prev_done:
+                                LIVE_LINES_COUNT.inc(new_done - prev_done)
+                            RECITATION_ACCURACY.observe(chunk_res.get("overall_accuracy", 100.0))
+                            if chunk_res.get("is_long_pause"):
+                                CADENCE_HESITATIONS.inc()
 
                             await websocket.send_json({
                                 "event": "chunk_annotated",

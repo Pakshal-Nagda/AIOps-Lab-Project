@@ -6,6 +6,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 import pytest
 import numpy as np
+from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from src.aligner import (
@@ -147,27 +148,36 @@ def test_continuous_sutra_aligner_multiline_and_pauses():
 
     dummy_audio = np.zeros(16000, dtype=np.float32)
 
-    # Process first utterance with normal cadence pause (0.7s)
-    chunk1 = aligner.process_utterance(dummy_audio, pause_duration=0.7)
-    assert chunk1 is not None
-    assert chunk1["is_long_pause"] is False
-    assert chunk1["pause_duration"] == 0.7
-    assert chunk1["lines_completed"] == 1
-    assert chunk1["total_lines"] == 2
+    # 1. User takes a pause mid-line (recites only "णमो") -> lines completed must remain 0!
+    with patch.object(verifier, 'transcribe', return_value="णमो"):
+        chunk0 = aligner.process_utterance(dummy_audio, pause_duration=0.5)
+        assert chunk0 is not None
+        assert chunk0["lines_completed"] == 0
+        assert chunk0["total_lines"] == 2
 
-    # Process second utterance with hesitation pause (2.1s)
-    chunk2 = aligner.process_utterance(dummy_audio, pause_duration=2.1)
-    assert chunk2 is not None
-    assert chunk2["is_long_pause"] is True
-    assert chunk2["total_long_pauses"] == 1
-    assert chunk2["lines_completed"] == 2
-    assert chunk2["total_hesitations"] == 1
-    # Verify hesitation is annotated inline in canvas tokens!
-    assert any(t.get("type") == "pause_badge" for t in chunk2["tokens"])
+    # 2. User completes Line 1 ("अरिहंताणं") with normal cadence pause (0.7s) -> line 1 completed!
+    with patch.object(verifier, 'transcribe', return_value="अरिहंताणं"):
+        chunk1 = aligner.process_utterance(dummy_audio, pause_duration=0.7)
+        assert chunk1 is not None
+        assert chunk1["is_long_pause"] is False
+        assert chunk1["pause_duration"] == 0.7
+        assert chunk1["lines_completed"] == 1
+        assert chunk1["total_lines"] == 2
+
+    # 3. User completes Line 2 ("णमो सिद्धाणं") with hesitation pause (2.1s) -> line 2 completed!
+    with patch.object(verifier, 'transcribe', return_value="णमो सिद्धाणं"):
+        chunk2 = aligner.process_utterance(dummy_audio, pause_duration=2.1)
+        assert chunk2 is not None
+        assert chunk2["is_long_pause"] is True
+        assert chunk2["total_long_pauses"] == 1
+        assert chunk2["lines_completed"] == 2
+        assert chunk2["total_hesitations"] == 1
+        # Verify hesitation is annotated inline in canvas tokens!
+        assert any(t.get("type") == "pause_badge" for t in chunk2["tokens"])
 
     summary = aligner.get_session_summary()
     assert summary["total_long_pauses"] == 1
-    assert summary["total_chunks"] == 2
+    assert summary["total_chunks"] == 3
     assert summary["lines_completed"] == 2
     assert summary["hesitation_count"] == 1
     assert summary["accuracy_percentage"] >= 0.0
