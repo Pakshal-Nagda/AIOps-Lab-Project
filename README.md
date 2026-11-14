@@ -19,4 +19,4 @@ For architectural design, operational specifications, and verification details, 
 
 ## LLM Usage Disclosure
 
-I used **ChatGPT** to solve minor doubts and **Gemini 3.8 Flash (Medium)** to significantly aid in coding.
+I used **ChatGPT** to solve minor doubts and **Gemini 3.8 Flash (Medium)** to significantly aid in coding and documentation. I take full responsibility of the code and all files that I turn in.
