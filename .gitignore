@@ -1,5 +1,10 @@
-/data
-/models
 __pycache__
 /mlruns
 mlflow.db
+
+/data/*
+!/data/prompts.json
+!/data/*.dvc
+
+/models/*
+!/models/*.dvc
