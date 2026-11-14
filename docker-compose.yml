@@ -8,8 +8,11 @@ services:
       - ./data:/app/data
     ports:
       - "8000:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - PYTHONUNBUFFERED=1
+      - MLFLOW_SERVING_URL=http://host.docker.internal:5001/invocations
 
   frontend:
     build:

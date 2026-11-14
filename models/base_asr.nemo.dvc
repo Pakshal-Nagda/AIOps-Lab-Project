@@ -1,5 +1,0 @@
-outs:
-- md5: 376e1efeca40a2dcd7721e14b603f2c5
-  size: 461649920
-  hash: md5
-  path: base_asr.nemo

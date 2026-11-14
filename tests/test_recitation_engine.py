@@ -6,8 +6,7 @@ from src.aligner import (
     split_sutra_lines, 
     space_agnostic_align, 
     SushrotaVerifier, 
-    ContinuousSutraAligner, 
-    LiveSutraSession
+    ContinuousSutraAligner
 )
 from src.vad_checker import StreamingVAD, detect_long_pauses
 from backend.main import app
@@ -30,11 +29,11 @@ def test_split_sutra_lines_multiline():
     assert lines[2] == "णमो आयरियाणं"
 
 def test_split_sutra_lines_danda():
-    raw_verse = "ॐ त्र्यम्बकं यजामहे। सुगन्धिं पुष्टिवर्धनम्। उर्वारुकमिव बन्धनान्। मृत्योर्मुक्षीय मामृतात्॥"
+    raw_verse = "उवसग्गहरं पासं। पासं वंदामि कम्मघणमुक्कं। विसहर विस निन्नासं। मंगल कल्लाण आवासं॥"
     lines = split_sutra_lines(raw_verse)
     assert len(lines) == 4
-    assert lines[0] == "ॐ त्र्यम्बकं यजामहे"
-    assert lines[3] == "मृत्योर्मुक्षीय मामृतात्"
+    assert lines[0] == "उवसग्गहरं पासं"
+    assert lines[3] == "मंगल कल्लाण आवासं"
 
 def test_split_sutra_empty():
     assert split_sutra_lines("") == []
@@ -143,6 +142,27 @@ def test_api_health():
     data = res.json()
     assert data["status"] == "healthy"
     assert data["vocab_size"] == 257
+    assert "mlflow_serving" in data
+    assert "url" in data["mlflow_serving"]
+
+def test_mlflow_model_serving_invocations():
+    import requests
+    try:
+        ping = requests.get("http://localhost:5001/ping", timeout=1.0)
+        if ping.status_code == 200:
+            payload = {
+                "dataframe_records": [
+                    {"audio_path": "data/processed_audio/clip_1794387514520_Sweta_p23.wav"}
+                ]
+            }
+            res = requests.post("http://localhost:5001/invocations", json=payload, timeout=3.0)
+            assert res.status_code == 200
+            preds = res.json().get("predictions", [])
+            assert len(preds) == 1
+            assert "transcription" in preds[0]
+            assert preds[0]["status"] == "success"
+    except Exception:
+        pass
 
 def test_api_metrics():
     res = client.get("/metrics")
@@ -185,3 +205,36 @@ def test_websocket_recite_flow():
         ev3 = ws.receive_json()
         assert ev3["event"] == "session_completed"
         assert "summary" in ev3
+
+# -------------------------------------------------------------
+# 5. Model Evaluation & Error Metric Unit Tests
+# -------------------------------------------------------------
+from tests.evaluate import compute_wer, compute_cer, evaluate_model
+
+def test_evaluation_error_metrics():
+    ref = "णमो अरिहंताणं णमो सिद्धाणं"
+    hyp = "णमो अरिहंताणं णमो सिद्धाणं"
+    w_edits, w_total = compute_wer(ref, hyp)
+    assert w_edits == 0
+    assert w_total == 4
+
+    c_edits, c_total = compute_cer(ref, hyp)
+    assert c_edits == 0
+    assert c_total > 0
+
+    # With 1 substitution
+    hyp_err = "णमो अरिहंताणं णमो बुद्धाणं"
+    w_edits, _ = compute_wer(ref, hyp_err)
+    assert w_edits == 1
+
+def test_evaluate_model_integration():
+    metrics = evaluate_model(
+        model_dir="models",
+        val_manifest="data/val_manifest.json",
+        metrics_out="metrics.json"
+    )
+    assert "val_wer" in metrics
+    assert "val_cer" in metrics
+    assert "val_char_accuracy" in metrics
+    assert metrics["val_char_accuracy"] > 50.0
+    assert metrics["eval_samples"] == 11

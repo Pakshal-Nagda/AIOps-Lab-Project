@@ -163,14 +163,47 @@ class SushrotaVerifier:
         with open(vocab_path, "r", encoding="utf-8") as f:
             self.vocab = json.load(f)
 
-        print(f"SushrotaVerifier initialized successfully! Vocabulary size: {len(self.vocab)}")
+        self.mlflow_serving_url = os.getenv("MLFLOW_SERVING_URL", "http://localhost:5001/invocations")
+        print(f"SushrotaVerifier initialized successfully! Vocabulary size: {len(self.vocab)} (MLflow Serving URL: {self.mlflow_serving_url})")
 
     def transcribe(self, audio_input: Union[str, np.ndarray], sample_rate: int = 16000) -> str:
         """
         Loads audio from filepath or accepts raw numpy array (16kHz float32),
-        runs the ONNX preprocessor and quantized Conformer-CTC acoustic model,
-        and performs greedy CTC decoding into Sanskrit text.
+        first attempting inference via MLflow Model Serving (/invocations).
+        If MLflow serving is unreachable, falls back to direct ONNX Runtime.
         """
+        # 1. Attempt inference via MLflow Model Serving
+        if self.mlflow_serving_url:
+            try:
+                import requests
+                import base64
+                import io
+
+                payload = None
+                if isinstance(audio_input, str) and os.path.exists(audio_input):
+                    payload = {"dataframe_records": [{"audio_path": os.path.abspath(audio_input)}]}
+                elif isinstance(audio_input, np.ndarray):
+                    wav_data = audio_input.copy()
+                    if wav_data.ndim > 1:
+                        wav_data = wav_data.mean(axis=1)
+                    if wav_data.dtype == np.int16:
+                        wav_data = wav_data.astype(np.float32) / 32768.0
+                    bio = io.BytesIO()
+                    sf.write(bio, wav_data, sample_rate, format="WAV", subtype="PCM_16")
+                    b64_str = base64.b64encode(bio.getvalue()).decode("ascii")
+                    payload = {"dataframe_records": [{"audio_base64": b64_str}]}
+
+                if payload:
+                    resp = requests.post(self.mlflow_serving_url, json=payload, timeout=4.0)
+                    if resp.status_code == 200:
+                        preds = resp.json().get("predictions", [])
+                        if preds and "transcription" in preds[0] and preds[0].get("status") == "success":
+                            return preds[0]["transcription"]
+            except Exception:
+                # Graceful fallback to direct local ONNX execution
+                pass
+
+        # 2. Local ONNX Runtime Execution (Fallback & Offline)
         if isinstance(audio_input, str):
             wav, sr = sf.read(audio_input, dtype="float32")
         elif isinstance(audio_input, np.ndarray):
@@ -393,64 +426,3 @@ class ContinuousSutraAligner:
             "average_pause_seconds": avg_pause,
             "completed_all": self.cursor_clean_idx >= self.total_phonetic_chars
         }
-
-
-# Legacy wrapper to maintain backward compatibility with existing tests
-class LiveSutraSession:
-    def __init__(self, reference_text_or_lines, verifier: SushrotaVerifier, max_pause_s: float = 1.5):
-        if isinstance(reference_text_or_lines, list):
-            ref_str = "\n".join(reference_text_or_lines)
-            self.lines = reference_text_or_lines
-        else:
-            ref_str = reference_text_or_lines
-            self.lines = split_sutra_lines(reference_text_or_lines)
-        self.aligner = ContinuousSutraAligner(ref_str, verifier, max_pause_s=max_pause_s)
-        self.current_line_idx = 0
-        self.results = []
-
-    def get_current_expected_line(self) -> Optional[str]:
-        if self.current_line_idx < len(self.lines):
-            return self.lines[self.current_line_idx]
-        return None
-
-    def process_line_audio(self, audio_data: np.ndarray, pause_duration: float = 0.0) -> Dict:
-        line_idx = self.current_line_idx
-        expected_line = self.lines[line_idx] if line_idx < len(self.lines) else ""
-        res = self.aligner.process_utterance(audio_data, pause_duration=pause_duration)
-        if res is None:
-            res = {
-                "transcription": "",
-                "tokens": [],
-                "orig_text_segment": expected_line,
-                "pause_duration": pause_duration,
-                "is_long_pause": pause_duration > self.aligner.max_pause_s,
-                "overall_accuracy": 0.0
-            }
-        
-        legacy_res = {
-            "line_index": line_idx,
-            "total_lines": len(self.lines),
-            "expected_text": expected_line,
-            "transcription": res["transcription"],
-            "similarity_score": res["overall_accuracy"],
-            "discrepancies": [],
-            "diff_tokens": res["tokens"],
-            "pause_duration_seconds": res["pause_duration"],
-            "is_long_pause": res["is_long_pause"],
-            "is_last_line": (line_idx + 1) >= len(self.lines)
-        }
-        self.results.append(legacy_res)
-        self.current_line_idx += 1
-        return legacy_res
-
-    def get_session_summary(self) -> Dict:
-        s = self.aligner.get_session_summary()
-        return {
-            "total_lines_completed": len(self.results),
-            "total_lines": len(self.lines),
-            "average_accuracy": s["overall_accuracy"],
-            "total_long_pauses": s["total_long_pauses"],
-            "completed_all": s["completed_all"]
-        }
-
-

@@ -7,10 +7,11 @@ import os
 import re
 import time
 import json
+import requests
 import numpy as np
 
 from src.vad_checker import detect_long_pauses, StreamingVAD
-from src.aligner import SushrotaVerifier, ContinuousSutraAligner, LiveSutraSession, split_sutra_lines
+from src.aligner import SushrotaVerifier, ContinuousSutraAligner
 
 app = FastAPI(
     title="Project Medhā - Sanskrit Recitation & Verification API",
@@ -42,11 +43,26 @@ verifier = SushrotaVerifier()
 @app.get("/health")
 def health_check():
     """Health check endpoint for container orchestrators and monitoring probes."""
+    mlflow_status = "offline"
+    mlflow_url = verifier.mlflow_serving_url
+    if mlflow_url:
+        try:
+            ping_url = mlflow_url.replace("/invocations", "/ping")
+            r = requests.get(ping_url, timeout=1.0)
+            if r.status_code == 200:
+                mlflow_status = "active"
+        except Exception:
+            pass
+
     return {
         "status": "healthy",
         "service": "Project Medhā Recitation Engine",
         "model_dir": verifier.model_dir,
-        "vocab_size": len(verifier.vocab)
+        "vocab_size": len(verifier.vocab),
+        "mlflow_serving": {
+            "url": mlflow_url,
+            "status": mlflow_status
+        }
     }
 
 @app.get("/metrics")
