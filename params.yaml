@@ -1,0 +1,30 @@
+# Project Medhā - Centralized Pipeline Parameters for DVC
+# =========================================================
+
+prepare:
+  val_split: 0.15
+  seed: 42
+  num_cpus: 4
+  min_duration: 0.5
+  max_duration: 20.0
+  top_db_trim: 30.0
+
+train:
+  epochs: 15
+  batch_size: 4
+  lr: 0.0001
+  min_lr: 0.000001
+  warmup_steps: 50
+  device: "cpu"
+  freeze_encoder: true
+
+export_onnx:
+  opset: 18
+
+serve:
+  model_name: "sushrota-asr"
+  alias: "champion"
+  port: 5001
+
+evaluate:
+  batch_size: 1

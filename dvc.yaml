@@ -1,0 +1,68 @@
+stages:
+  prepare:
+    cmd: ./venv/bin/python scripts/prepare_dataset.py --input-dir data/raw --output-dir data --val-split ${prepare.val_split} --seed ${prepare.seed} --num-cpus ${prepare.num_cpus} --min-duration ${prepare.min_duration} --max-duration ${prepare.max_duration} --top-db-trim ${prepare.top_db_trim}
+    deps:
+      - data/raw
+      - scripts/prepare_dataset.py
+    params:
+      - prepare
+    outs:
+      - data/processed_audio
+      - data/train_manifest.json
+      - data/val_manifest.json
+      - data/cleaning_stats.json
+
+  train:
+    cmd: ./venv/bin/python scripts/train.py --base-model models/base_asr.nemo --train-manifest data/train_manifest.json --val-manifest data/val_manifest.json --output-dir models --output-name finetuned_asr.nemo --epochs ${train.epochs} --batch-size ${train.batch_size} --lr ${train.lr} --min-lr ${train.min_lr} --warmup-steps ${train.warmup_steps} --device ${train.device} --freeze-encoder
+    deps:
+      - data/train_manifest.json
+      - data/val_manifest.json
+      - models/base_asr.nemo
+      - scripts/train.py
+    params:
+      - train
+    outs:
+      - models/finetuned_asr.nemo:
+          cache: false
+
+  export_onnx:
+    cmd: ./venv/bin/python scripts/convert_nemo_to_onnx.py --input_nemo models/finetuned_asr.nemo --output_dir models --opset ${export_onnx.opset}
+    deps:
+      - models/finetuned_asr.nemo
+      - scripts/convert_nemo_to_onnx.py
+    params:
+      - export_onnx
+    outs:
+      - models/model_asr.onnx:
+          cache: false
+      - models/preprocessor.onnx:
+          cache: false
+      - models/preprocessor.onnx.data:
+          cache: false
+      - models/sanskrit_vocab.json:
+          cache: false
+
+  register_mlflow:
+    cmd: ./venv/bin/python scripts/register_mlflow_model.py --model-dir models --model-name ${serve.model_name} --alias ${serve.alias} --mlflow-uri sqlite:///mlflow.db
+    deps:
+      - models/model_asr.onnx
+      - models/preprocessor.onnx
+      - models/preprocessor.onnx.data
+      - models/sanskrit_vocab.json
+      - scripts/register_mlflow_model.py
+    params:
+      - serve
+
+  evaluate:
+    cmd: ./venv/bin/python tests/evaluate.py --model-dir models --val-manifest data/val_manifest.json --metrics-out metrics.json
+    deps:
+      - data/val_manifest.json
+      - models/model_asr.onnx
+      - models/preprocessor.onnx
+      - models/sanskrit_vocab.json
+      - tests/evaluate.py
+    params:
+      - evaluate
+    metrics:
+      - metrics.json:
+          cache: false

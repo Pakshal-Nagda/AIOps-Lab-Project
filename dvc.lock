@@ -1,0 +1,181 @@
+schema: '2.0'
+stages:
+  prepare:
+    cmd: ./venv/bin/python scripts/prepare_dataset.py --input-dir data/raw 
+      --output-dir data --val-split 0.15 --seed 42 --num-cpus 4 --min-duration 
+      0.5 --max-duration 20.0 --top-db-trim 30.0
+    deps:
+    - path: data/raw
+      hash: md5
+      md5: 4cd6949302cb4dce4e99e97894832e95.dir
+      size: 22638254
+      nfiles: 79
+    - path: scripts/prepare_dataset.py
+      hash: md5
+      md5: a8b7f3bf8f34b37e99cb6b656263bd5c
+      size: 16540
+      isexec: true
+    params:
+      params.yaml:
+        prepare:
+          val_split: 0.15
+          seed: 42
+          num_cpus: 4
+          min_duration: 0.5
+          max_duration: 20.0
+          top_db_trim: 30.0
+    outs:
+    - path: data/cleaning_stats.json
+      hash: md5
+      md5: e4a210cac276b1141354fe886c4f1662
+      size: 517
+    - path: data/processed_audio
+      hash: md5
+      md5: 5f9d8f9b5b81d8c9e84468950ed170a1.dir
+      size: 20279272
+      nfiles: 78
+    - path: data/train_manifest.json
+      hash: md5
+      md5: cc85419301953c7a116aff90c025bec8
+      size: 23064
+    - path: data/val_manifest.json
+      hash: md5
+      md5: e050f1bb19d138cb8f5d28e8ce551d6d
+      size: 3793
+  train:
+    cmd: ./venv/bin/python scripts/train.py --base-model models/base_asr.nemo 
+      --train-manifest data/train_manifest.json --val-manifest 
+      data/val_manifest.json --output-dir models --output-name 
+      finetuned_asr.nemo --epochs 15 --batch-size 4 --lr 0.0001 --min-lr 1e-06 
+      --warmup-steps 50 --device cpu --freeze-encoder
+    deps:
+    - path: data/train_manifest.json
+      hash: md5
+      md5: cc85419301953c7a116aff90c025bec8
+      size: 23064
+    - path: data/val_manifest.json
+      hash: md5
+      md5: e050f1bb19d138cb8f5d28e8ce551d6d
+      size: 3793
+    - path: models/base_asr.nemo
+      hash: md5
+      md5: 376e1efeca40a2dcd7721e14b603f2c5
+      size: 461649920
+    - path: scripts/train.py
+      hash: md5
+      md5: 5c124c073b2ee9b1b30e549552671917
+      size: 11937
+      isexec: true
+    params:
+      params.yaml:
+        train:
+          epochs: 15
+          batch_size: 4
+          lr: 0.0001
+          min_lr: 1e-06
+          warmup_steps: 50
+          device: cpu
+          freeze_encoder: true
+    outs:
+    - path: models/finetuned_asr.nemo
+      hash: md5
+      md5: ecfe6cc19b62e245227a1d1f47d1c011
+      size: 461649920
+  export_onnx:
+    cmd: ./venv/bin/python scripts/convert_nemo_to_onnx.py --input_nemo 
+      models/finetuned_asr.nemo --output_dir models --opset 18
+    deps:
+    - path: models/finetuned_asr.nemo
+      hash: md5
+      md5: ecfe6cc19b62e245227a1d1f47d1c011
+      size: 461649920
+    - path: scripts/convert_nemo_to_onnx.py
+      hash: md5
+      md5: 658f9f3c38844c2a1b2d2b6c5bd514eb
+      size: 14015
+      isexec: true
+    params:
+      params.yaml:
+        export_onnx:
+          opset: 18
+    outs:
+    - path: models/model_asr.onnx
+      hash: md5
+      md5: 67f0e297ed2d24b30f2721fba1fdd4cb
+      size: 187431108
+    - path: models/preprocessor.onnx
+      hash: md5
+      md5: aa58850ea15fdd701833f6ef01293317
+      size: 87061
+    - path: models/preprocessor.onnx.data
+      hash: md5
+      md5: 3d2b1dc768c726e654c477ed5c5e39a2
+      size: 84288
+    - path: models/sanskrit_vocab.json
+      hash: md5
+      md5: e9c234859e69fcc81bf2f55c5241f70f
+      size: 2996
+  evaluate:
+    cmd: ./venv/bin/python tests/evaluate.py --model-dir models --val-manifest 
+      data/val_manifest.json --metrics-out metrics.json
+    deps:
+    - path: data/val_manifest.json
+      hash: md5
+      md5: e050f1bb19d138cb8f5d28e8ce551d6d
+      size: 3793
+    - path: models/model_asr.onnx
+      hash: md5
+      md5: 67f0e297ed2d24b30f2721fba1fdd4cb
+      size: 187431108
+    - path: models/preprocessor.onnx
+      hash: md5
+      md5: aa58850ea15fdd701833f6ef01293317
+      size: 87061
+    - path: models/sanskrit_vocab.json
+      hash: md5
+      md5: e9c234859e69fcc81bf2f55c5241f70f
+      size: 2996
+    - path: tests/evaluate.py
+      hash: md5
+      md5: ad1670f367f9057b7347c53fcbc6a7a4
+      size: 7537
+    params:
+      params.yaml:
+        evaluate:
+          batch_size: 1
+    outs:
+    - path: metrics.json
+      hash: md5
+      md5: 575ccb4fb5b758c577f658f9e5ab4de1
+      size: 220
+  register_mlflow:
+    cmd: ./venv/bin/python scripts/register_mlflow_model.py --model-dir models 
+      --model-name sushrota-asr --alias champion --mlflow-uri 
+      sqlite:///mlflow.db
+    deps:
+    - path: models/model_asr.onnx
+      hash: md5
+      md5: 67f0e297ed2d24b30f2721fba1fdd4cb
+      size: 187431108
+    - path: models/preprocessor.onnx
+      hash: md5
+      md5: aa58850ea15fdd701833f6ef01293317
+      size: 87061
+    - path: models/preprocessor.onnx.data
+      hash: md5
+      md5: 3d2b1dc768c726e654c477ed5c5e39a2
+      size: 84288
+    - path: models/sanskrit_vocab.json
+      hash: md5
+      md5: e9c234859e69fcc81bf2f55c5241f70f
+      size: 2996
+    - path: scripts/register_mlflow_model.py
+      hash: md5
+      md5: 6c915b6b7436b3a766eacbec1d2dd1c8
+      size: 10901
+    params:
+      params.yaml:
+        serve:
+          model_name: sushrota-asr
+          alias: champion
+          port: 5001

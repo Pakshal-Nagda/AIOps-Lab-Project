@@ -1,0 +1,10 @@
+{
+  "val_wer": 0.7836,
+  "val_cer": 0.2469,
+  "val_char_accuracy": 75.31,
+  "eval_samples": 11,
+  "total_audio_seconds": 94.5,
+  "avg_latency_ms": 342.4,
+  "real_time_factor": 0.0399,
+  "total_infer_time_seconds": 3.77
+}
