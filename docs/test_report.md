@@ -113,7 +113,7 @@ Measured during `scripts/prepare_dataset.py` execution across 4 parallel Ray wor
 
 | Evaluation Criteria | Target Metric | Measured Value | Compliance Status |
 | :--- | :--- | :--- | :--- |
-| **Pytest Pass Rate** | $100\%$ | $100\%$ (24/24) | **MET** |
+| **Pytest Pass Rate** | $100\%$ | $100\%$ (27/27) | **MET** |
 | **Character Accuracy** | $\ge 70.0\%$ | **$75.31\%$** | **MET** |
 | **Character Error Rate** | $\le 25.0\%$ | **$24.69\%$** | **MET** |
 | **Average Latency** | $\le 500\text{ ms}$ | **$340.27\text{ ms}$** | **MET** |

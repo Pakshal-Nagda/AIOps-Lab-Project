@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" width="100%" height="100%" style="background-color: #0b1120; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <linearGradient id="gradHeader" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ea580c"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="gradBox" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="gradCardHover" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#334155"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#f97316"/>
+    </marker>
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#10b981"/>
+    </marker>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8"/>
+    </marker>
+  </defs>
+
+  <!-- Title & Header -->
+  <g transform="translate(50, 40)">
+    <rect x="0" y="0" width="48" height="48" rx="12" fill="url(#gradHeader)" filter="url(#shadow)"/>
+    <text x="24" y="32" font-size="24" font-weight="bold" fill="#ffffff" text-anchor="middle">मे</text>
+    <text x="65" y="26" font-size="22" font-weight="bold" fill="#f8fafc">Project Medhā — End-to-End AIOps Architecture</text>
+    <text x="65" y="44" font-size="13" fill="#94a3b8">Continuous Speech Data Preparation, NeMo Transfer Learning, MLflow Registry, and Real-Time Verification</text>
+  </g>
+
+  <!-- 1. Data Collection & Preprocessing -->
+  <g transform="translate(50, 130)" filter="url(#shadow)">
+    <rect width="260" height="180" rx="16" fill="url(#gradBox)" stroke="#334155" stroke-width="1.5"/>
+    <rect x="0" y="0" width="260" height="38" rx="16" fill="#1e293b"/>
+    <text x="18" y="24" font-size="13" font-weight="bold" fill="#ea580c">1. DATA ENGINEERING</text>
+    
+    <text x="18" y="65" font-size="14" font-weight="bold" fill="#f1f5f9">Ray Distributed Cleaning</text>
+    <text x="18" y="85" font-size="12" fill="#94a3b8">• Multi-Speaker Crowdsourcing</text>
+    <text x="18" y="103" font-size="12" fill="#94a3b8">• 16kHz Mono Resampling &amp; RMS</text>
+    <text x="18" y="121" font-size="12" fill="#94a3b8">• Unicode NFC Devanagari Clean</text>
+    <text x="18" y="139" font-size="12" fill="#94a3b8">• Peak Normalization &amp; VAD Trim</text>
+    
+    <rect x="18" y="150" width="224" height="20" rx="4" fill="#0369a1" fill-opacity="0.3"/>
+    <text x="130" y="164" font-size="10" font-family="monospace" fill="#38bdf8" text-anchor="middle">scripts/prepare_dataset.py</text>
+  </g>
+
+  <!-- 2. Model Training & Governance -->
+  <g transform="translate(370, 130)" filter="url(#shadow)">
+    <rect width="260" height="180" rx="16" fill="url(#gradBox)" stroke="#334155" stroke-width="1.5"/>
+    <rect x="0" y="0" width="260" height="38" rx="16" fill="#1e293b"/>
+    <text x="18" y="24" font-size="13" font-weight="bold" fill="#ea580c">2. MODEL TRAINING &amp; DVC</text>
+    
+    <text x="18" y="65" font-size="14" font-weight="bold" fill="#f1f5f9">NeMo Conformer-CTC</text>
+    <text x="18" y="85" font-size="12" fill="#94a3b8">• Automated DAG via dvc.yaml</text>
+    <text x="18" y="103" font-size="12" fill="#94a3b8">• Sanskrit Transfer Learning</text>
+    <text x="18" y="121" font-size="12" fill="#94a3b8">• DVC Raw Audio Tracking</text>
+    <text x="18" y="139" font-size="12" fill="#94a3b8">• Reproducible Experimentation</text>
+    
+    <rect x="18" y="150" width="224" height="20" rx="4" fill="#b45309" fill-opacity="0.3"/>
+    <text x="130" y="164" font-size="10" font-family="monospace" fill="#fbbf24" text-anchor="middle">scripts/train.py &amp; dvc.yaml</text>
+  </g>
+
+  <!-- 3. Model Optimization & Registry -->
+  <g transform="translate(690, 130)" filter="url(#shadow)">
+    <rect width="260" height="180" rx="16" fill="url(#gradBox)" stroke="#334155" stroke-width="1.5"/>
+    <rect x="0" y="0" width="260" height="38" rx="16" fill="#1e293b"/>
+    <text x="18" y="24" font-size="13" font-weight="bold" fill="#ea580c">3. REGISTRY &amp; COMPRESSION</text>
+    
+    <text x="18" y="65" font-size="14" font-weight="bold" fill="#f1f5f9">MLflow Model Registry</text>
+    <text x="18" y="85" font-size="12" fill="#94a3b8">• INT8 Dynamic Quantization</text>
+    <text x="18" y="103" font-size="12" fill="#94a3b8">• 122MB Footprint (~4x Smaller)</text>
+    <text x="18" y="121" font-size="12" fill="#94a3b8">• Alias: models:/sushrota-asr@champion</text>
+    <text x="18" y="139" font-size="12" fill="#94a3b8">• PyFunc Serving Wrapper</text>
+    
+    <rect x="18" y="150" width="224" height="20" rx="4" fill="#047857" fill-opacity="0.3"/>
+    <text x="130" y="164" font-size="10" font-family="monospace" fill="#34d399" text-anchor="middle">scripts/register_mlflow_model.py</text>
+  </g>
+
+  <!-- Connectors Row 1 -->
+  <line x1="310" y1="220" x2="368" y2="220" stroke="#f97316" stroke-width="2" stroke-dasharray="4" marker-end="url(#arrow)"/>
+  <line x1="630" y1="220" x2="688" y2="220" stroke="#f97316" stroke-width="2" stroke-dasharray="4" marker-end="url(#arrow)"/>
+
+  <!-- 4. Real-Time Serving Layer -->
+  <g transform="translate(690, 370)" filter="url(#shadow)">
+    <rect width="260" height="175" rx="16" fill="url(#gradBox)" stroke="#334155" stroke-width="1.5"/>
+    <rect x="0" y="0" width="260" height="38" rx="16" fill="#1e293b"/>
+    <text x="18" y="24" font-size="13" font-weight="bold" fill="#10b981">4. MODEL SERVING (PORT 5001)</text>
+    
+    <text x="18" y="65" font-size="14" font-weight="bold" fill="#f1f5f9">MLflow Serving Daemon</text>
+    <text x="18" y="85" font-size="12" fill="#94a3b8">• POST /invocations</text>
+    <text x="18" y="103" font-size="12" fill="#94a3b8">• Multi-threaded INT8 ONNX</text>
+    <text x="18" y="121" font-size="12" fill="#94a3b8">• 80-mel Spectrogram Extractor</text>
+    <text x="18" y="139" font-size="12" fill="#94a3b8">• Fast Fallback to In-Process ONNX</text>
+    
+    <rect x="18" y="148" width="224" height="18" rx="4" fill="#065f46" fill-opacity="0.3"/>
+    <text x="130" y="161" font-size="10" font-family="monospace" fill="#6ee7b7" text-anchor="middle">mlflow models serve -p 5001</text>
+  </g>
+
+  <!-- Connector Downwards: 3 -> 4 -->
+  <line x1="820" y1="310" x2="820" y2="368" stroke="#10b981" stroke-width="2" marker-end="url(#arrowGreen)"/>
+
+  <!-- 5. Application Gateway & Recitation Engine -->
+  <g transform="translate(370, 370)" filter="url(#shadow)">
+    <rect width="260" height="175" rx="16" fill="url(#gradBox)" stroke="#334155" stroke-width="1.5"/>
+    <rect x="0" y="0" width="260" height="38" rx="16" fill="#1e293b"/>
+    <text x="18" y="24" font-size="13" font-weight="bold" fill="#38bdf8">5. GATEWAY &amp; VAD (PORT 8000)</text>
+    
+    <text x="18" y="65" font-size="14" font-weight="bold" fill="#f1f5f9">FastAPI &amp; Streaming VAD</text>
+    <text x="18" y="85" font-size="12" fill="#94a3b8">• Bidirectional WebSocket /ws/recite</text>
+    <text x="18" y="103" font-size="12" fill="#94a3b8">• Continuous Sanskrit Aligner</text>
+    <text x="18" y="121" font-size="12" fill="#94a3b8">• Cadence Hesitation Detection</text>
+    <text x="18" y="139" font-size="12" fill="#94a3b8">• Space-Agnostic Akshara Diffs</text>
+    
+    <rect x="18" y="148" width="224" height="18" rx="4" fill="#0369a1" fill-opacity="0.3"/>
+    <text x="130" y="161" font-size="10" font-family="monospace" fill="#7dd3fc" text-anchor="middle">backend/main.py &amp; src/aligner.py</text>
+  </g>
+
+  <!-- Connector Leftwards: 4 -> 5 -->
+  <line x1="690" y1="457" x2="632" y2="457" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+  <!-- 6. Observability & Client -->
+  <g transform="translate(50, 370)" filter="url(#shadow)">
+    <rect width="260" height="175" rx="16" fill="url(#gradBox)" stroke="#334155" stroke-width="1.5"/>
+    <rect x="0" y="0" width="260" height="38" rx="16" fill="#1e293b"/>
+    <text x="18" y="24" font-size="13" font-weight="bold" fill="#f59e0b">6. CLIENT &amp; OBSERVABILITY</text>
+    
+    <text x="18" y="65" font-size="14" font-weight="bold" fill="#f1f5f9">SPA UI &amp; Prometheus</text>
+    <text x="18" y="85" font-size="12" fill="#94a3b8">• AudioWorklet 16kHz PCM Stream</text>
+    <text x="18" y="103" font-size="12" fill="#94a3b8">• Blind Memorization Practice</text>
+    <text x="18" y="121" font-size="12" fill="#94a3b8">• Prometheus Metrics (/metrics)</text>
+    <text x="18" y="139" font-size="12" fill="#94a3b8">• Inline Hesitation &amp; Diffs</text>
+    
+    <rect x="18" y="148" width="224" height="18" rx="4" fill="#b45309" fill-opacity="0.3"/>
+    <text x="130" y="161" font-size="10" font-family="monospace" fill="#fde047" text-anchor="middle">Port 8501 (UI) &amp; Port 9090 (Prom)</text>
+  </g>
+
+  <!-- Connector Leftwards: 5 -> 6 -->
+  <line x1="370" y1="457" x2="312" y2="457" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrowBlue)"/>
+
+</svg>

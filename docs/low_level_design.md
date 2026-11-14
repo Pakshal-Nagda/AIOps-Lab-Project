@@ -17,15 +17,17 @@ medha/
 │   ├── aligner.py                  # SushrotaVerifier, ContinuousSutraAligner, Alignment Math
 │   └── vad_checker.py              # StreamingVAD & Static Audio Cadence Analyzer
 ├── scripts/
+│   ├── download_model.py           # Download the base ASR model from Huggingface
 │   ├── prepare_dataset.py          # Ray Distributed Audio & Unicode Preprocessing
 │   ├── train.py                    # NeMo Fine-Tuning Script with MLflow Tracking
 │   ├── convert_nemo_to_onnx.py     # ONNX INT8 Dynamic Quantization Exporter
 │   └── register_mlflow_model.py    # MLflow Pyfunc Model Packaging & Champion Alias Registration
 ├── tests/
 │   ├── evaluate.py                 # Empirical Model Validation Engine (WER, CER, RTF)
-│   └── test_recitation_engine.py   # Automated Pytest Suite (24 Test Cases)
+│   └── test_recitation_engine.py   # Automated Pytest Suite (27 Test Cases)
 └── frontend/
-    └── index.html                  # Single Page Application (SPA) Client
+    ├── index.html                  # Main page to use the recitation verifier
+    └── collector.html              # Page for collecting audio data from speakers
 ```
 
 ---
@@ -112,11 +114,13 @@ Custom `mlflow.pyfunc.PythonModel` wrapper implementing the standardized MLflow 
 * **Endpoint:** `GET /metrics`
 * **Description:** OpenMetrics time-series endpoint scraped by Prometheus.
 * **Key Metrics Exported:**
-  - `api_requests_total{endpoint=..., method=...}`: Cumulative HTTP requests.
-  - `recitation_accuracy_distribution`: Histogram of user pronunciation accuracy percentages.
-  - `inference_latency_seconds`: Histogram of acoustic model inference latency.
-  - `recitation_hesitation_pauses_total`: Counter tracking pauses $> 1.5$s.
-  - `websocket_active_connections`: Gauge tracking concurrent live recitation streams.
+  - `api_requests_total{endpoint=...}`: Cumulative HTTP requests by endpoint (pre-initialized, tracked via middleware).
+  - `inference_duration_seconds`: Histogram of acoustic model inference latency.
+  - `recitation_accuracy_percentage`: Distribution of recitation pronunciation accuracy percentage.
+  - `cadence_hesitations_total`: Counter tracking recitation pauses exceeding 1.5s threshold.
+  - `live_recitation_sessions_total`: Total live WebSocket recitation sessions started.
+  - `live_lines_verified_total`: Total individual sutra lines verified live.
+  - `active_websocket_connections`: Gauge tracking concurrent active live recitation streams.
 
 ---
 
@@ -149,6 +153,7 @@ Custom `mlflow.pyfunc.PythonModel` wrapper implementing the standardized MLflow 
 }
 ```
 * **Error Responses:**
+  - `400 Bad Request`: Reference text contains no Devanagari characters.
   - `422 Unprocessable Entity`: Missing `reference_text` or `file` parameter.
   - `500 Internal Server Error`: Audio decoder failure or unhandled runtime exception.
 

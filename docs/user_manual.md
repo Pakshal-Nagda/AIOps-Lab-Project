@@ -18,30 +18,9 @@ Medhā listens to your live voice through your computer or phone microphone, ver
 
 The application interface is intentionally simple, calm, and distraction-free:
 
-```
-+----------------------------------------------------------------------------------+
-|  🕉️ Project Medhā (मेधा)          [📖 User Manual]   [⚙️ MLOps Pipeline]   ● Ready |
-+----------------------------------------------------------------------------------+
-|  [ 🎙️ Live Recitation ]      [ 📁 Audio File Verification ]                       |
-|                                                                                  |
-|  Select Sacred Manuscript: [ Ṇamōkāra Mahāmantra (णमोकार महामंत्र)   ▼ ]           |
-|  [ ] Hide Text for Blind Memorization Test                                       |
-|                                                                                  |
-|  +----------------------------------------------------------------------------+  |
-|  | णमो अरिहंताणं                                                              |  |
-|  | णमो सिद्धाणं                                                               |  |
-|  | णमो आयरियाणं                                                               |  |
-|  +----------------------------------------------------------------------------+  |
-|                                                                                  |
-|  [ 🎙️ Start Live Recitation ]                     Hesitation Threshold: [ 1.5s ] |
-|                                                                                  |
-|  Overall Accuracy: 100%   |   Hesitation Pauses: 0   |   Latency: 312 ms         |
-+----------------------------------------------------------------------------------+
-```
 
 ### Top Navigation Bar
 * **📖 User Manual:** Opens quick on-screen instructions at any time.
-* **⚙️ MLOps Pipeline:** Opens the technical evaluation and pipeline architecture modal (intended for course instructors, evaluators, and system administrators).
 * **System Status Badge:** Shows `● Live Ready` when the backend inference engine and model server are active.
 
 ---
@@ -54,7 +33,7 @@ The application interface is intentionally simple, calm, and distraction-free:
    - Choose a preset scripture from the dropdown menu (e.g., *Ṇamōkāra Mahāmantra*, *Uvasaggaharaṁ Stōtra*, *Khamemi Savve Jive*, *Gayatri Mantra*), or paste custom Devanagari text into the reference box.
 2. **Select Practice Mode:**
    - **Guided Mode (Default):** The text remains visible on screen as you recite.
-   - **Blind Memorization Test:** Check the box **"Hide Text for Blind Memorization Test"** to test your memory without visual prompts. The text will be veiled with an auspicious golden motif and will reveal itself line-by-line as you chant correctly!
+   - **Blind Memorization Test:** Click the prominent **"🙈 Hide Text for Blind Recitation"** button to test your memory without visual prompts. The text will be veiled with an auspicious golden motif and will reveal itself line-by-line as you chant correctly!
 3. **Start Reciting:**
    - Click the green **"🎙️ Start Live Recitation"** button and allow microphone access in your browser.
    - Begin chanting at your natural speed.
@@ -65,9 +44,10 @@ The application interface is intentionally simple, calm, and distraction-free:
    - <span style="color: #22c55e; font-weight: bold;">Green (Correct):</span> Syllable pronounced accurately.
    - <span style="color: #ef4444; font-weight: bold;">Red (Mispronounced):</span> Syllable substituted or mispronounced.
    - <span style="color: #f59e0b; font-weight: bold;">Amber / Yellow (Omitted):</span> Syllable missed or skipped.
-   - **⚠️ Hesitation Warning:** If you pause for longer than 1.5 seconds, a gentle hesitation indicator appears, helping you build continuous, confident recall.
+   - <span style="color: #a855f7; font-weight: bold;">Purple (Added Sound):</span> Extra syllable or unexpected phoneme chanted.
+   - **Hesitation Annotation:** Pauses exceeding 1.5 seconds are automatically annotated on the manuscript canvas as cadence hesitation badges without disruptive pop-up alerts.
 6. **Finish Session:**
-   - Click **"⏹️ Finish Session"** when done. A session score card will summarize your total accuracy percentage, syllables recited, and cadence consistency.
+   - Click **"⏹️ Finish Session"** when done. A session score card will summarize your total lines completed, overall accuracy percentage, and cadence hesitations.
 
 ---
 
@@ -91,8 +71,8 @@ If you have pre-recorded your recitation or received an audio recording from a s
 
 Medhā improves its accuracy through community voice contributions across different accents and speaking styles:
 
-* **Access the Voice Studio:** Navigate to the data collection portal at `http://localhost:8501/collector.html` or via the sidebar link.
-* **Recording:** Read the short 2–10 second verse shown on screen, click **"Record"**, recite clearly, and click **"Upload"**.
+* **Access the Voice Studio:** Navigate to the data collection portal at `http://localhost:8501/collector.html` or via the top navigation link (opens directly in the same tab).
+* **Recording:** Enter your speaker name (defaults to "Enter your name here"), read the short 2–10 second verse shown on screen, click **"Record"**, recite clearly, and click **"Upload"**.
 * Every verified recording is automatically sanitized using Ray distributed audio processing and included in continuous model training cycles.
 
 ---

@@ -58,14 +58,18 @@ flowchart TD
         DVC --> MLflowRegistry
     end
 
-    subgraph ObservabilityLayer ["Observability Layer (Port 9090)"]
-        Prometheus["Prometheus Time-Series Monitor"]
+    subgraph ObservabilityLayer ["Observability Layer (Port 9090 & Port 3000)"]
+        Prometheus["Prometheus Time-Series Monitor (Port 9090)"]
+        Grafana["Grafana Observability Dashboard (Port 3000)"]
         Prometheus -->|Scrapes /metrics| PromExporter
+        Grafana -->|Queries PromQL| Prometheus
     end
 
     Gateway -->|"HTTP Invocations (Fallback: ONNX Runtime)"| MLflowServe
     MLflowRegistry -.->|Deploys Champion Model| ServingLayer
 ```
+
+A full standalone vector schematic of the pipeline and architecture is maintained at [architecture.svg](architecture.svg).
 
 ---
 
@@ -104,7 +108,7 @@ flowchart TD
 * **Decision:** Custom dynamic programming space-agnostic character alignment (`src/aligner.py`) rather than standard Levenshtein word-error rate (WER).
 * **Rationale:**
   - *Sanskrit Sandhi Rules:* In Devanagari recitation, word boundaries frequently merge (e.g., "णमो अरिहंताणं" recited continuously sounds identical to "णमोअरिहंताणं"). Standard WER algorithms treat joined words as deletions or substitutions, reporting false negatives.
-  - *Visual Feedback:* The aligner strips whitespace during acoustic character comparison, maps transcribed aksharas to reference canonical positions, and then re-injects original manuscript spacing for color-coded visual rendering (green: correct, red: mispronounced, yellow: missing).
+  - *Visual Feedback:* The aligner strips whitespace during acoustic character comparison, maps transcribed aksharas to reference canonical positions, and then re-injects original manuscript spacing for color-coded visual rendering (green: correct, red: mispronounced, yellow: missing, purple: added sound).
 
 ### 3.6 Cadence & Hesitation Monitoring: Dual-Threshold Streaming VAD
 * **Decision:** Implement dual-threshold streaming energy Voice Activity Detection (`src/vad_checker.py`).
@@ -171,4 +175,4 @@ sequenceDiagram
 
 1. **Edge-First Deployment:** The architecture functions fully offline without external cloud dependencies. All models and libraries execute in isolated Docker containers (`docker-compose.yml`).
 2. **Resource Constraints:** Inference memory ceiling is capped under 1.5GB RAM, allowing concurrent execution alongside frontend and monitoring tools on resource-constrained consumer laptops.
-3. **Observability:** Key operational indicators (API throughput, audio processing latency, pronunciation accuracy distributions, VAD hesitation counts) are exposed via OpenMetrics standards at `/metrics` for automated Prometheus aggregation.
+3. **Observability:** Key operational indicators (API throughput, audio processing latency, pronunciation accuracy distributions, VAD hesitation counts) are exposed via OpenMetrics standards at `/metrics` for automated Prometheus aggregation (Port 9090) and declarative Grafana dashboard visualization (Port 3000).

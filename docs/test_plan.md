@@ -39,13 +39,13 @@ The testing strategy spans four testing tiers:
 | **Real-Time Factor (RTF)** | $\le 0.08\times$ | $0.15\times$ |
 | **VAD Line Pause Threshold** | $0.5\text{s} - 1.0\text{s}$ | $0.5\text{s} - 1.2\text{s}$ |
 | **VAD Hesitation Alert Threshold** | $> 1.5\text{s}$ | $> 1.5\text{s}$ |
-| **Automated Test Pass Rate** | $100\%$ (24 / 24) | $100\%$ |
+| **Automated Test Pass Rate** | $100\%$ (27 / 27) | $100\%$ |
 
 ---
 
-## 4. Master Test Cases Matrix (TC-01 to TC-24)
+## 4. Master Test Cases Matrix (TC-01 to TC-27)
 
-All 24 test cases below are implemented in `tests/test_recitation_engine.py` and execute automatically via `pytest`.
+All 27 test cases below are implemented in `tests/test_recitation_engine.py` and execute automatically via `pytest`.
 
 ### Tier 1: Text Segmentation & Manuscript Parsing Unit Tests
 
