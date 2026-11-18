@@ -1,6 +1,7 @@
 __pycache__
 /mlruns
 mlflow.db
+*.mp4
 
 /data/*
 !/data/prompts.json

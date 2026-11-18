@@ -15,6 +15,8 @@ For architectural design, operational specifications, and verification details, 
 * **[Test Report](docs/test_report.md):** Empirical model validation benchmarks (CER, WER, RTF) and automated test results.
 * **[User Manual](docs/user_manual.md):** Step-by-step practitioner guide for live continuous recitation, audio file verification, and voice dataset contribution.
 
+Find the video demonstration of the entire project [here](https://drive.google.com/file/d/1ziLDyUMikVS0uwilkjQjcG-ARF5n5gbZ/view?usp=sharing).
+
 ---
 
 ## LLM Usage Disclosure
