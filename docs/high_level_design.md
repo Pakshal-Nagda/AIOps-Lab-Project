@@ -87,7 +87,7 @@ A full standalone vector schematic of the pipeline and architecture is maintaine
 * **Decision:** Use **DVC (Data Version Control)** to manage pipeline stage dependencies and raw data immutability (`dvc.yaml`, `params.yaml`, `data/raw.dvc`).
 * **Rationale:**
   - *Data Immutability:* Storing raw speech recordings and audio clips in Git inflates repository size and degrades performance. DVC hashes the `data/raw/` directory and tracks audio version snapshots with minimal metadata footprints.
-  - *Deterministic Reproducibility:* The entire lifecycle—from Ray preprocessing to NeMo training, ONNX quantization, model registry, and evaluation—is represented as a directed acyclic graph (DAG) in `dvc.yaml`.
+  - *Deterministic Reproducibility:* The entire lifecycle, from Ray preprocessing to NeMo training, ONNX quantization, model registry, and evaluation, is represented as a directed acyclic graph (DAG) in `dvc.yaml`.
   - *Cache Decoupling:* Heavy model artifacts (`.onnx` files) are flagged with `cache: false` in DVC to prevent storage duplication with the MLflow Model Registry.
 
 ### 3.3 Model Serving & Experiment Tracking: MLflow Model Registry
@@ -102,7 +102,7 @@ A full standalone vector schematic of the pipeline and architecture is maintaine
 * **Rationale:**
   - *Streaming Latency:* Connectionist Temporal Classification (CTC) outputs character-level probability distributions in a single forward pass without autoregressive loop overhead, achieving a Real-Time Factor (RTF) of **0.035x** to **0.039x** (~300ms per 8-second clip).
   - *Pronunciation Sensitivity:* Autoregressive models conditioned on language models frequently "hallucinate" correct words even when the speaker mispronounces syllables. CTC preserves exact acoustic phoneme predictions, making it suitable for error detection.
-  - *Model Footprint:* Dynamic INT8 quantization reduces memory footprint from ~480MB to **122MB**, enabling smooth CPU execution with minimal thermal throttling.
+  - *Model Footprint:* Dynamic INT8 quantization reduces disk footprint from 441MB (NeMo archive) to **179MB** (`model_asr.onnx`), enabling smooth CPU execution with minimal thermal throttling.
 
 ### 3.5 Phonetic Alignment: Space-Agnostic Dynamic Character Mapping
 * **Decision:** Custom dynamic programming space-agnostic character alignment (`src/aligner.py`) rather than standard Levenshtein word-error rate (WER).
@@ -135,38 +135,38 @@ sequenceDiagram
     participant Aligner as Continuous Aligner
     participant Prom as Prometheus Metrics
 
-    Speaker->>UI: Selects Sutra & Starts Live Recitation
+    Speaker->>UI: Enters Verse & Clicks "Begin Recitation"
     UI->>WS: WebSocket Connect + Action: "start"
     WS-->>UI: Event: "session_started"
     
-    loop Real-Time Audio Streaming (Every 100ms)
+    loop Real-Time Audio Streaming (Every 128ms)
         UI->>WS: Binary 16kHz PCM Audio Chunk
         WS->>VAD: Feed Audio Chunk
         
         alt Energy > Threshold (Speech Ongoing)
             VAD-->>WS: Speech Active (Buffer accumulating)
-        else Silence >= 0.75s (Line Boundary)
+        else Silence >= 0.45s (Utterance / Line Boundary)
             VAD-->>WS: Event: "utterance_boundary" (Audio Buffer)
             WS->>MLflow: POST /invocations (Audio Base64)
             MLflow-->>WS: Transcribed Devanagari Aksharas
             WS->>Aligner: Advance Cursor & Align Aksharas
             Aligner-->>WS: Colored Manuscript Diff Tokens & Score
             WS->>Prom: Observe Latency & Accuracy
-            WS-->>UI: Event: "chunk_annotated" (Tokens, Accuracy)
-            UI-->>Speaker: Highlights Recited Text in Green / Red
+            WS-->>UI: Event: "chunk_annotated" (Tokens, Accuracy, Lines)
+            UI-->>Speaker: Highlights Recited Text (Green, Red, Yellow, Purple)
         else Silence >= 1.5s (Hesitation Detected)
             VAD-->>WS: Event: "long_pause_warning" (Pause Duration)
             WS->>Prom: Increment Long Pause Counter
             WS-->>UI: Event: "long_pause_warning"
-            UI-->>Speaker: Displays Hesitation Alert Indicator
+            UI-->>Speaker: Inserts Inline Cadence Hesitation Badge [⏸️ Xs]
         end
     end
 
-    Speaker->>UI: Clicks "Finish Session"
+    Speaker->>UI: Clicks "Finish Recitation"
     UI->>WS: Action: "stop"
     WS->>Aligner: Finalize Session Summary
-    WS-->>UI: Event: "session_completed" (Accuracy, Hesitations, Stats)
-    UI-->>Speaker: Displays Final Verification Card
+    WS-->>UI: Event: "session_completed" (Accuracy, Hesitations, Lines)
+    UI-->>Speaker: Displays Session Completion Summary Banner
 ```
 
 ---

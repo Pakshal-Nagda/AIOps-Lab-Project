@@ -24,7 +24,7 @@ The testing strategy spans four testing tiers:
 * **Test Framework:** `pytest` (v9.2.0)
 * **HTTP & WebSocket Client:** `fastapi.testclient.TestClient` (Starlette TestClient with `httpx` and `websockets`)
 * **Acoustic Inference Engine:** MLflow Model Server on port `5001` with fallback to `onnxruntime` INT8
-* **Distributed Compute Engine:** Ray Core 2.44.1
+* **Distributed Compute Engine:** Ray Core 2.60.0
 
 ---
 
@@ -69,7 +69,7 @@ All 27 test cases below are implemented in `tests/test_recitation_engine.py` and
 | :--- | :--- | :--- | :--- | :--- |
 | **TC-07** | `test_streaming_vad_speech_and_boundary` | `StreamingVAD` | 0.4s active speech chunk followed by 0.6s silence chunk | Emits `speech_start`, tracks `is_speaking=True`, then emits `line_boundary` with `pause_duration >= 0.5s`. |
 | **TC-08** | `test_streaming_vad_hesitation_warning` | `StreamingVAD` | Continuous silence chunk lasting 1.2s when `max_allowed_pause_s=1.0` | Emits `long_pause_warning` event with `pause_duration >= 1.0s`. |
-| **TC-09** | `test_streaming_vad_short_blip_ignored` | `StreamingVAD` | 50ms noise click (below `min_speech_duration_s=0.2s`) followed by 0.6s silence | Discards transient noise; does NOT emit `line_boundary` and resets `is_speaking=False`. |
+| **TC-09** | `test_streaming_vad_short_blip_ignored` | `StreamingVAD` | 50ms noise click (below `min_speech_duration_s=0.25s`) followed by 0.6s silence | Discards transient noise; does NOT emit `line_boundary` and resets `is_speaking=False`. |
 
 ### Tier 4: Continuous Aligner State Machine Unit Tests
 

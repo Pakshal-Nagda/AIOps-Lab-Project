@@ -20,8 +20,8 @@ All planned automated test cases spanning unit logic, phonetic alignment, stream
 * **Total Pytest Execution Duration:** 8.22 seconds  
 * **Acoustic Character Accuracy:** **75.31%** (Exceeds 70.0% acceptance threshold)  
 * **Character Error Rate (CER):** **24.69%** (Meets $\le 25.0\%$ target threshold)  
-* **Real-Time Factor (RTF):** **0.0396x** (~25x faster than real-time audio playback)  
-* **Average Inference Latency:** **340.27 ms** (Well below 500 ms threshold)  
+* **Real-Time Factor (RTF):** **0.0399x** (~25x faster than real-time audio playback)  
+* **Average Inference Latency:** **342.4 ms** (Well below 500 ms threshold)  
 
 ---
 
@@ -80,7 +80,7 @@ Evaluated on the held-out validation set (`data/val_manifest.json`) comprising 1
 * **Character Accuracy (75.31%):** Achieved without GPU acceleration via CPU transfer learning on Conformer-CTC. This provides accurate phonetic error identification when compared against canonical reference texts.
 * **Character Error Rate (24.69%):** Outperforms the project target threshold of $\le 25.0\%$.
 * **Word Error Rate (78.36%):** As noted in the High-Level Design, WER is naturally high for Sanskrit/Prakrit due to arbitrary whitespace insertions across continuous *sandhi* phrases. The space-agnostic aligner bypasses this limitation.
-* **Inference Speed & Real-Time Factor (0.0396x):** The quantized INT8 ONNX acoustic model transcribes an 8.6-second verse line in approximately **340 ms**, enabling near-instantaneous real-time visual feedback on live recitation screens.
+* **Inference Speed & Real-Time Factor (0.0399x):** The quantized INT8 ONNX acoustic model transcribes an 8.6-second verse line in approximately **342.4 ms**, enabling near-instantaneous real-time visual feedback on live recitation screens.
 
 ---
 
@@ -116,8 +116,8 @@ Measured during `scripts/prepare_dataset.py` execution across 4 parallel Ray wor
 | **Pytest Pass Rate** | $100\%$ | $100\%$ (27/27) | **MET** |
 | **Character Accuracy** | $\ge 70.0\%$ | **$75.31\%$** | **MET** |
 | **Character Error Rate** | $\le 25.0\%$ | **$24.69\%$** | **MET** |
-| **Average Latency** | $\le 500\text{ ms}$ | **$340.27\text{ ms}$** | **MET** |
-| **Real-Time Factor** | $\le 0.10\times$ | **$0.0396\times$** | **MET** |
+| **Average Latency** | $\le 500\text{ ms}$ | **$342.4\text{ ms}$** | **MET** |
+| **Real-Time Factor** | $\le 0.10\times$ | **$0.0399\times$** | **MET** |
 | **DVC CI Pipeline** | Clean DAG | Verified (`dvc.yaml`) | **MET** |
 | **MLflow Model Serving** | Model Registry Serving | Active (`sushrota-asr@champion`) | **MET** |
 | **Hesitation Detection** | Alert on pause $>1.5$s | Verified | **MET** |

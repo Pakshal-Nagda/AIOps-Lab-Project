@@ -39,20 +39,16 @@ Responsible for loading the quantized acoustic model, preprocessing audio wavefo
 
 ```python
 class SushrotaVerifier:
-    def __init__(
-        self,
-        model_dir: str = "models",
-        mlflow_url: str = "http://host.docker.internal:5001/invocations"
-    ):
+    def __init__(self, model_dir: str = "models"):
         ...
 ```
 * **Key Attributes:**
-  - `session`: `onnxruntime.InferenceSession` (quantized INT8 acoustic model, used for local fallback).
+  - `asr_session`: `onnxruntime.InferenceSession` (quantized INT8 acoustic model, used for local fallback).
   - `prep_session`: `onnxruntime.InferenceSession` (audio preprocessor converting 16kHz PCM to log-mel spectrogram).
   - `vocab`: Dictionary mapping integer CTC token indices to Devanagari characters.
-  - `mlflow_url`: Network endpoint for standalone MLflow model serving.
+  - `mlflow_serving_url`: Network endpoint for standalone MLflow model serving (configured via `MLFLOW_SERVING_URL`).
 * **Key Methods:**
-  - `transcribe(audio_path_or_array)` $\to$ `str`: Executes audio transcription. First attempts an HTTP request to `mlflow_url`. If unavailable or unreachable, executes local in-process ONNX Runtime inference.
+  - `transcribe(audio_path_or_array)` $\to$ `str`: Executes audio transcription. First attempts an HTTP request to `mlflow_serving_url`. If unreachable, executes local in-process ONNX Runtime inference.
   - `verify_recitation(transcribed_text, reference_text)` $\to$ `Dict`: Computes token-level discrepancies, match accuracy percentage, and aligned diff tokens.
 
 ### 2.2 `ContinuousSutraAligner` (`src/aligner.py`)
@@ -61,10 +57,12 @@ Tracks continuous recitation over multi-line sacred manuscripts without requirin
 * **State Tracking:**
   - `cursor_orig_idx`: Index of the current position in the original raw manuscript.
   - `cursor_clean_idx`: Index within the whitespace-stripped phonetic representation.
-  - `completed_chunks`: Array of verified utterance events.
+  - `line_phonetic_ends`: Cumulative phonetic character counts marking the end of each manuscript line.
+  - `annotated_chunks`: Array of verified utterance events.
 * **Key Methods:**
-  - `process_utterance(audio_array, pause_duration)` $\to$ `Dict`: Takes an audio buffer from the VAD, transcribes it, advances the cursor dynamically using substring matching and Levenshtein alignment, and returns colored token annotations.
-  - `get_session_summary()` $\to$ `Dict`: Aggregates overall recitation accuracy, total recited characters, and total hesitation pauses.
+  - `compute_lines_completed()` $\to$ `int`: Computes the number of completed verse lines based on phonetic coverage.
+  - `process_utterance(audio_array, pause_duration)` $\to$ `Dict`: Takes an audio buffer from the VAD, transcribes it, advances the cursor dynamically using substring matching and Levenshtein alignment, inserts an inline `pause_badge` token if `pause_duration > max_pause_s`, and returns colored token annotations.
+  - `get_session_summary()` $\to$ `Dict`: Aggregates overall recitation accuracy, total recited characters, lines completed, and total hesitation pauses.
 
 ### 2.3 `StreamingVAD` (`src/vad_checker.py`)
 Stateful real-time Voice Activity Detector operating on sequential 16kHz mono audio frames.
@@ -72,11 +70,12 @@ Stateful real-time Voice Activity Detector operating on sequential 16kHz mono au
 * **Configuration Parameters:**
   - `sample_rate`: Audio sampling frequency (default: `16000`).
   - `energy_threshold`: Root-Mean-Square (RMS) amplitude threshold for speech detection (default: `0.012`).
-  - `min_speech_duration_s`: Minimum duration required to qualify an energy burst as speech (default: `0.2s`). Shorter transients are discarded.
-  - `line_pause_s`: Cadence silence duration triggering an utterance boundary (default: `0.75s`).
+  - `min_speech_duration_s`: Minimum duration required to qualify an energy burst as speech (default: `0.25s`). Shorter transients are discarded.
+  - `line_pause_s`: Cadence silence duration triggering an utterance boundary (default: `0.45s`).
   - `max_allowed_pause_s`: Silence duration qualifying as a recitation hesitation (default: `1.5s`).
 * **Key Methods:**
   - `feed_chunk(chunk: np.ndarray)` $\to$ `List[Dict]`: Processes a streaming chunk and returns state transition events (`speech_start`, `line_boundary`, `long_pause_warning`).
+  - `flush()` $\to$ `Optional[np.ndarray]`: Flushes any remaining active speech in the buffer upon session stop.
 
 ### 2.4 `SushrotaASRPyfunc` (`scripts/register_mlflow_model.py`)
 Custom `mlflow.pyfunc.PythonModel` wrapper implementing the standardized MLflow serving interface.
@@ -99,11 +98,12 @@ Custom `mlflow.pyfunc.PythonModel` wrapper implementing the standardized MLflow 
 ```json
 {
   "status": "healthy",
+  "service": "Project Medhā Recitation Engine",
+  "model_dir": "models",
   "vocab_size": 257,
-  "onnx_model_loaded": true,
   "mlflow_serving": {
     "url": "http://host.docker.internal:5001/invocations",
-    "status": "healthy"
+    "status": "active"
   }
 }
 ```
@@ -190,7 +190,8 @@ stateDiagram-v2
   "action": "start",
   "reference_text": "णमो अरिहंताणं\nणमो सिद्धाणं\nणमो आयरियाणं",
   "energy_threshold": 0.012,
-  "max_pause_s": 1.5
+  "max_pause_s": 1.5,
+  "line_pause_s": 0.45
 }
 ```
 
@@ -199,7 +200,7 @@ stateDiagram-v2
 {
   "event": "session_started",
   "total_phonetic_chars": 33,
-  "message": "Continuous recitation session active."
+  "total_lines": 3
 }
 ```
 
@@ -210,16 +211,25 @@ stateDiagram-v2
 ```json
 {
   "event": "chunk_annotated",
-  "chunk_idx": 1,
   "transcription": "णमो अरिहंताणं",
-  "chunk_accuracy": 100.0,
-  "overall_accuracy": 100.0,
+  "tokens": [
+    {"type": "correct", "text": "णमो"},
+    {"type": "preserve", "text": " "},
+    {"type": "correct", "text": "अरिहंताणं"}
+  ],
+  "orig_text_segment": "णमो अरिहंताणं",
   "pause_duration": 0.82,
   "is_long_pause": false,
-  "tokens": [
-    {"type": "correct", "text": "णमो अरिहंताणं"}
-  ],
-  "manuscript_progress": 0.33
+  "overall_accuracy": 100.0,
+  "accuracy_percentage": 100.0,
+  "progress_percentage": 33.3,
+  "line_index": 1,
+  "lines_completed": 1,
+  "total_lines": 3,
+  "total_long_pauses": 0,
+  "total_hesitations": 0,
+  "hesitation_count": 0,
+  "is_completed": false
 }
 ```
 
@@ -227,8 +237,7 @@ stateDiagram-v2
 ```json
 {
   "event": "long_pause_warning",
-  "pause_duration": 1.65,
-  "message": "Hesitation detected (> 1.5s)!"
+  "pause_duration": 1.65
 }
 ```
 
@@ -244,10 +253,19 @@ stateDiagram-v2
 {
   "event": "session_completed",
   "summary": {
+    "overall_accuracy": 100.0,
+    "accuracy_percentage": 100.0,
+    "total_phonetic_chars": 33,
+    "processed_chars": 33,
+    "correct_chars": 33,
     "total_chunks": 3,
-    "total_phonetic_recited": 33,
+    "lines_completed": 3,
+    "total_lines": 3,
     "total_long_pauses": 0,
-    "overall_accuracy_percentage": 100.0
+    "total_hesitations": 0,
+    "hesitation_count": 0,
+    "average_pause_seconds": 0.78,
+    "completed_all": true
   }
 }
 ```
@@ -289,16 +307,18 @@ stateDiagram-v2
   - `text`: Prompt manuscript text.
   - `speaker`: Contributor identifier or pseudonym.
 * **Processing:**
-  - Normalizes audio to 16kHz Mono 16-bit WAV via PyAV/Soundfile.
+  - Normalizes audio to 16kHz Mono 16-bit WAV via PyAV/FFmpeg/Soundfile.
   - Saves file to `data/raw/clip_{timestamp}_{speaker}_p{prompt_id}.wav`.
   - Appends record to `data/raw/metadata.csv`.
 * **Response:**
 ```json
 {
   "status": "success",
-  "filename": "clip_1794387514520_Sweta_p23.wav",
-  "duration_seconds": 2.85,
-  "speaker": "Sweta"
+  "filename": "clip_1794387514520_Sweta_p1.wav",
+  "duration": 2.85,
+  "prompt_id": 1,
+  "total_clips": 79,
+  "total_duration_minutes": 10.61
 }
 ```
 
@@ -307,8 +327,22 @@ stateDiagram-v2
 ```json
 {
   "total_clips": 78,
-  "total_speakers": 4,
-  "total_duration_seconds": 633.62
+  "total_minutes": 10.56,
+  "speakers": {
+    "Sweta": 24,
+    "Pakshal": 22,
+    "Aditi": 18,
+    "Rahul": 14
+  },
+  "recent_recordings": [
+    {
+      "filename": "clip_1794387514520_Sweta_p5.wav",
+      "text": "णमो लोए सव्वसाहूणं",
+      "speaker": "Sweta",
+      "duration_seconds": "3.12",
+      "timestamp": "2026-11-14 16:30:22"
+    }
+  ]
 }
 ```
 
